@@ -1,12 +1,42 @@
 {
   "name": "babysql",
-  "private": true,
   "version": "1.0.0",
+  "description": "Ultra-lightweight local-first SQLite query studio and CSV ingestion engine with automated statistical profiling",
   "type": "module",
+  "bin": {
+    "babysql": "./bin/babysql.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "samples",
+    "README.md",
+    "run.bat",
+    "serve.py"
+  ],
+  "keywords": [
+    "sqlite",
+    "sql",
+    "csv",
+    "sqlite-wasm",
+    "database",
+    "studio",
+    "statistics",
+    "data-analysis",
+    "local-first",
+    "offline"
+  ],
+  "author": "Antarish Deshpande",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antarishpdeshpande-cyber/BabySQL.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node ./bin/babysql.js"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
