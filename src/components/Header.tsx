@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Database, Upload, Download, FolderOpen, RefreshCw, FlaskConical } from 'lucide-react';
+import { Database, Upload, Download, FolderOpen, RefreshCw, FlaskConical, Dice5, BookOpen } from 'lucide-react';
 
 interface HeaderProps {
   onOpenUploader: () => void;
@@ -10,6 +10,8 @@ interface HeaderProps {
   onResetDb: () => void;
   isReady: boolean;
   tableCount: number;
+  onOpenSampling?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   onResetDb,
   isReady,
   tableCount,
+  onOpenSampling,
+  onOpenGuide,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +78,28 @@ export const Header: React.FC<HeaderProps> = ({
           <FlaskConical className={`w-3.5 h-3.5 ${isSampleMode ? 'text-emerald-400' : 'text-slate-400'}`} />
           <span>{isSampleMode ? 'Sample Mode (Active)' : 'Sample Mode'}</span>
         </button>
+
+        {onOpenSampling && (
+          <button
+            onClick={onOpenSampling}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-surface-raised hover:bg-border text-slate-200 text-xs border border-border transition-all"
+            title="Create a sample of an existing table or simulate theoretical distributions"
+          >
+            <Dice5 className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Sample / Simulate</span>
+          </button>
+        )}
+
+        {onOpenGuide && (
+          <button
+            onClick={onOpenGuide}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-300 text-xs border border-transparent hover:border-border transition-all"
+            title="Statistical Decision Framework & When-to-Use Reference Guide"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Stats Guide</span>
+          </button>
+        )}
 
         <input
           type="file"

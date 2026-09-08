@@ -164,6 +164,59 @@ EMP059,Simran Aggarwal,Marketing,Content Specialist,11,85842,12,4.91,Onsite
 EMP060,Natasha Choudhury,Engineering,Software Engineer,2,82075,5,4.49,Hybrid
 `;
 
+export const SAMPLE_AB_TEST_CSV = `user_id,variant,device,time_spent_sec,pages_viewed,converted,revenue_usd
+USR101,Control,Mobile,45.2,3,0,0.0
+USR102,Treatment,Desktop,142.8,7,1,78.5
+USR103,Control,Desktop,82.4,4,0,0.0
+USR104,Treatment,Mobile,115.6,6,1,54.2
+USR105,Control,Mobile,38.9,2,0,0.0
+USR106,Treatment,Desktop,178.4,9,1,120.0
+USR107,Treatment,Mobile,96.3,5,1,45.0
+USR108,Control,Desktop,65.1,3,0,0.0
+USR109,Control,Mobile,52.4,3,0,0.0
+USR110,Treatment,Mobile,134.2,6,1,65.8
+USR111,Control,Desktop,90.5,4,1,40.0
+USR112,Treatment,Desktop,185.0,8,1,110.5
+USR113,Control,Mobile,41.2,2,0,0.0
+USR114,Treatment,Mobile,102.7,5,1,52.0
+USR115,Control,Desktop,73.6,3,0,0.0
+USR116,Treatment,Desktop,160.2,7,1,95.0
+USR117,Treatment,Mobile,122.4,6,1,60.0
+USR118,Control,Mobile,48.1,2,0,0.0
+USR119,Control,Desktop,88.9,4,0,0.0
+USR120,Treatment,Desktop,192.5,9,1,135.0
+USR121,Control,Mobile,36.5,2,0,0.0
+USR122,Treatment,Mobile,118.9,5,1,58.4
+USR123,Control,Desktop,69.4,3,0,0.0
+USR124,Treatment,Desktop,155.1,7,1,89.0
+USR125,Control,Mobile,44.7,2,0,0.0
+USR126,Treatment,Mobile,128.6,6,1,64.2
+USR127,Control,Desktop,84.2,4,1,45.0
+USR128,Treatment,Desktop,170.8,8,1,105.0
+USR129,Control,Mobile,39.8,2,0,0.0
+USR130,Treatment,Mobile,112.1,5,1,55.0
+USR131,Control,Desktop,78.5,3,0,0.0
+USR132,Treatment,Desktop,182.3,8,1,115.0
+USR133,Control,Mobile,47.3,2,0,0.0
+USR134,Treatment,Mobile,125.0,6,1,62.5
+USR135,Control,Desktop,92.1,4,0,0.0
+USR136,Treatment,Desktop,168.4,7,1,98.0
+USR137,Control,Mobile,42.0,2,0,0.0
+USR138,Treatment,Mobile,119.5,5,1,59.0
+USR139,Control,Desktop,75.8,3,0,0.0
+USR140,Treatment,Desktop,176.9,8,1,108.0
+USR141,Control,Mobile,37.4,2,0,0.0
+USR142,Treatment,Mobile,130.2,6,1,66.0
+USR143,Control,Desktop,86.0,4,0,0.0
+USR144,Treatment,Desktop,189.4,9,1,125.0
+USR145,Control,Mobile,46.8,2,0,0.0
+USR146,Treatment,Mobile,121.7,5,1,61.0
+USR147,Control,Desktop,80.3,3,1,42.0
+USR148,Treatment,Desktop,164.5,7,1,92.0
+USR149,Control,Mobile,40.5,2,0,0.0
+USR150,Treatment,Mobile,127.3,6,1,63.0
+`;
+
 export interface QueryChip {
   label: string;
   query: string;
@@ -233,5 +286,17 @@ ORDER BY base_salary DESC;`,
   {
     label: 'Order Schema',
     query: `PRAGMA table_info("ecommerce_sales");`,
+  },
+  {
+    label: 'A/B Test Summary',
+    query: `SELECT 
+  variant,
+  COUNT(*) AS total_users,
+  SUM(converted) AS conversions,
+  ROUND(AVG(converted) * 100, 1) AS conversion_rate_pct,
+  ROUND(AVG(time_spent_sec), 1) AS avg_time_sec,
+  ROUND(AVG(revenue_usd), 2) AS avg_revenue_per_user
+FROM ab_test_experiment
+GROUP BY variant;`,
   },
 ];

@@ -4,6 +4,9 @@ import { Sidebar } from './components/Sidebar';
 import { SqlEditor } from './components/SqlEditor';
 import { ResultsGrid } from './components/ResultsGrid';
 import { StatsDrawer } from './components/StatsDrawer';
+import { HypothesisStudio } from './components/HypothesisStudio';
+import { SamplingModal } from './components/SamplingModal';
+import { StatisticalGuideModal } from './components/StatisticalGuideModal';
 import { CsvUploader } from './components/CsvUploader';
 import {
   initDatabase,
@@ -17,6 +20,7 @@ import { ingestCsvString } from './lib/csvParser';
 import {
   SAMPLE_SALES_CSV,
   SAMPLE_SALARIES_CSV,
+  SAMPLE_AB_TEST_CSV,
   SAMPLE_MODE_QUERIES,
   getDynamicTableQueries,
 } from './lib/sampleData';
@@ -30,9 +34,11 @@ export const App: React.FC = () => {
   const [isSampleMode, setIsSampleMode] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'results' | 'stats'>('results');
+  const [activeTab, setActiveTab] = useState<'results' | 'stats' | 'hypothesis'>('results');
   const [selectedStatsColumn, setSelectedStatsColumn] = useState<string>('');
   const [isUploaderOpen, setIsUploaderOpen] = useState<boolean>(false);
+  const [isSamplingOpen, setIsSamplingOpen] = useState<boolean>(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -109,10 +115,11 @@ export const App: React.FC = () => {
       try {
         await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
         await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
+        await ingestCsvString(SAMPLE_AB_TEST_CSV, { tableName: 'ab_test_experiment' });
         setIsSampleMode(true);
         refreshTables();
         handleSelectTableQuery('ecommerce_sales');
-        showToast('Sample Mode enabled: loaded demo sales & salaries tables.');
+        showToast('Sample Mode enabled: loaded demo sales, salaries & A/B test tables.');
       } catch (err: any) {
         showToast(`Failed to enable sample mode: ${err.message}`, 'error');
       }
@@ -120,6 +127,7 @@ export const App: React.FC = () => {
       if (window.confirm('Exit Sample Mode and clear demo tables?')) {
         executeQuery('DROP TABLE IF EXISTS "ecommerce_sales";');
         executeQuery('DROP TABLE IF EXISTS "employee_salaries";');
+        executeQuery('DROP TABLE IF EXISTS "ab_test_experiment";');
         setIsSampleMode(false);
         refreshTables();
         const remaining = fetchTables();
@@ -226,6 +234,8 @@ export const App: React.FC = () => {
         onResetDb={handleResetDb}
         isReady={isReady}
         tableCount={tables.length}
+        onOpenSampling={() => setIsSamplingOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
       />
 
       {/* Main Workspace: Sidebar + Workspace */}
@@ -283,13 +293,28 @@ export const App: React.FC = () => {
                 <BarChart2 className="w-3.5 h-3.5" />
                 <span>Statistical Analysis</span>
                 <span className="text-[10px] uppercase font-mono px-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  New
+                  Stats
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('hypothesis')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs font-medium transition-all ${
+                  activeTab === 'hypothesis'
+                    ? 'bg-surface-raised text-cyan-400 border-b-2 border-primary'
+                    : 'text-muted hover:text-slate-200'
+                }`}
+              >
+                <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Hypothesis Testing Studio</span>
+                <span className="text-[10px] uppercase font-mono px-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  Business Models
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Bottom Half: Result Grid OR Statistical Profiler */}
+          {/* Bottom Half: Result Grid OR Statistical Profiler OR Hypothesis Studio */}
           <div className="flex-1 flex flex-col min-h-0">
             {activeTab === 'results' ? (
               <ResultsGrid
@@ -297,11 +322,21 @@ export const App: React.FC = () => {
                 onOpenUploader={() => setIsUploaderOpen(true)}
                 onLaunchSampleMode={handleToggleSampleMode}
               />
-            ) : (
+            ) : activeTab === 'stats' ? (
               <StatsDrawer
                 columns={queryResult?.columns || []}
                 values={queryResult?.values || []}
                 initialColumn={selectedStatsColumn}
+              />
+            ) : (
+              <HypothesisStudio
+                tables={tables}
+                activeTableName={activeTableName}
+                onSampleCreated={(newTableName, count) => {
+                  refreshTables();
+                  handleSelectTableQuery(newTableName);
+                  showToast(`Sample table "${newTableName}" (${count} rows) created!`);
+                }}
               />
             )}
           </div>
@@ -313,6 +348,28 @@ export const App: React.FC = () => {
         isOpen={isUploaderOpen}
         onClose={() => setIsUploaderOpen(false)}
         onIngestSuccess={handleIngestSuccess}
+      />
+
+      {/* Global Sampling & Simulation Modal */}
+      <SamplingModal
+        isOpen={isSamplingOpen}
+        onClose={() => setIsSamplingOpen(false)}
+        tables={tables}
+        defaultTable={activeTableName}
+        onSampleCreated={(newTableName, count) => {
+          refreshTables();
+          handleSelectTableQuery(newTableName);
+          showToast(`Sample table "${newTableName}" (${count} rows) created!`);
+        }}
+      />
+
+      {/* Global Statistical Guide Modal */}
+      <StatisticalGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        onSelectTest={() => {
+          setActiveTab('hypothesis');
+        }}
       />
     </div>
   );

@@ -5,17 +5,18 @@
 [![GitHub Repo](https://img.shields.io/badge/GitHub-BabySQL-blue?logo=github)](https://github.com/antarishpdeshpande-cyber/BabySQL)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](https://opensource.org/licenses/MIT)
 [![Engine](https://img.shields.io/badge/Engine-SQLite%203%20WASM-cyan.svg)](https://sql.js.org/)
-[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-~1.03%20MB-brightgreen.svg)]()
+[![Stats Engine](https://img.shields.io/badge/Stats-jStat%20%7C%20simple--statistics-blueviolet.svg)]()
+[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-~1.09%20MB-brightgreen.svg)]()
 [![Offline First](https://img.shields.io/badge/Privacy-100%25%20Local%20%26%20Offline-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20PWA%20%7C%20Windows%20%7C%20CLI-purple.svg)]()
 
 <br />
 
-**An ultra-lightweight, zero-cloud, privacy-first SQLite database studio and CSV ingestion engine with automated statistical profiling.**
+**An ultra-lightweight, zero-cloud, privacy-first SQLite database studio, CSV ingestion engine, and business hypothesis testing suite.**
 
-*Runs 100% locally inside your browser via WebAssembly SQLite 3. No database servers, no heavy Electron runtimes, zero telemetry.*
+*Runs 100% locally inside your browser via WebAssembly SQLite 3. No database servers, no heavy 300MB Electron runtimes, zero cloud telemetry, and instant sub-2ms statistical calculations.*
 
-[Quickstart](#-quickstart) • [Key Features](#-key-features) • [Sample Mode](#-sample-mode--testing) • [Performance Benchmarks](#-load-capacity--benchmarks) • [Architecture](#-architecture)
+[Quickstart](#-quickstart) • [Key Features](#-key-features) • [Hypothesis Testing](#-hypothesis-testing--business-models) • [Sampling & Simulation](#-dataset-sampling--simulation) • [When-to-Use Guide](#-statistical-decision-guide) • [Benchmarks](#-load-capacity--benchmarks)
 
 </div>
 
@@ -23,24 +24,30 @@
 
 ## 🌟 Why BabySQL?
 
-Traditional database GUI tools (DBeaver, Beekeeper Studio, DB Browser for SQLite) are either bloated **250MB+ Electron apps**, require native **C++/Java installers**, or look like they were built in 2002. 
+Traditional database GUI tools (DBeaver, Beekeeper Studio, DB Browser for SQLite) are either bloated **250MB+ Electron apps** or require native **C++/Java installers**. Meanwhile, business analysts and product managers who need to run A/B test $t$-tests, ANOVA, or regressions are forced into cumbersome Excel plugins, paid SPSS licenses, or heavy Python Jupyter environments.
 
-**BabySQL** is designed for the modern data practitioner who needs to **drop a CSV, query it with real SQL, inspect statistical distributions, and export a clean SQLite file** in under 3 seconds.
+**BabySQL** delivers a unified, zero-friction workspace:
+1. **Drop any CSV** into your browser.
+2. **Query it with pure SQLite 3 SQL** with instant sorting, filtering, and pagination.
+3. **Run rigorous business hypothesis tests** ($t$-tests, ANOVA, $\chi^2$, OLS Regression) with **automated plain-English executive summaries**.
+4. **Sample & simulate distributions** using the **Fisher-Yates shuffle** or **jStat theoretical distributions**.
+5. **Export a clean, production-ready `.sqlite` binary** in under 3 seconds.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       BabySQL UI                            │
-│  ┌──────────────┐  ┌──────────────────┐  ┌───────────────┐  │
-│  │ Schema Tree  │  │  SQL Code Editor │  │ Query History │  │
-│  │ & Column Meta│  │  (Ctrl + Enter)  │  │ Dynamic Chips │  │
-│  └──────┬───────┘  └────────┬─────────┘  └───────┬───────┘  │
-│         │                   │                    │          │
-│  ┌──────▼───────────────────▼────────────────────▼───────┐  │
-│  │    Dual Workspace: Table Results  |  Stats Profiler   │  │
-│  │    - Sorting & Pagination        - Live Histograms    │  │
-│  │    - Global Filter & Search      - Central Tendency   │  │
-│  └──────────────────────────┬────────────────────────────┘  │
-└─────────────────────────────┼───────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                              BabySQL UI                               │
+│  ┌──────────────┐  ┌──────────────────┐  ┌─────────────────────────┐  │
+│  │ Schema Tree  │  │  SQL Code Editor │  │  ⚡ Sampling & Sim      │  │
+│  │ & Column Meta│  │  (Ctrl + Enter)  │  │  Fisher-Yates / jStat   │  │
+│  └──────┬───────┘  └────────┬─────────┘  └────────────┬────────────┘  │
+│         │                   │                         │               │
+│  ┌──────▼───────────────────▼─────────────────────────▼────────────┐  │
+│  │  Tri-Workspace: Table Results | Column Stats | Hypothesis Studio │  │
+│  │  - Sort & Paginate     - Live Histograms     - A/B Welch's t    │  │
+│  │  - Cell Copy to Clip   - IQR & Boxplot math  - ANOVA / χ² / OLS │  │
+│  │  - CSV / JSON Export   - Data Quality Profil - Plain-English MBA│  │
+│  └──────────────────────────┬──────────────────────────────────────┘  │
+└─────────────────────────────┼─────────────────────────────────────────┘
                               │
              ┌────────────────▼────────────────┐
              │       SQLite 3 WASM Engine      │
@@ -64,25 +71,58 @@ Traditional database GUI tools (DBeaver, Beekeeper Studio, DB Browser for SQLite
 * **Dynamic Table Shortcuts**: When you load a table, query chips automatically adapt to that table (`Preview table`, `Count Rows`, `Schema Info`, `Sorted 25`).
 * Query execution timer with millisecond precision and detailed error diagnostics.
 
-### 📊 Automated Statistical Profiler & Histograms
-* Instantly profile any numeric or categorical column:
-  * **Central Tendency**: Mean (Average), Median (50th percentile), Mode.
-  * **Dispersion**: Standard Deviation ($\sigma$), Variance, Min, Max, Range, Sum.
-  * **Percentiles & Quartiles**: Q1 (25th %), Q3 (75th %), and Interquartile Range (IQR).
-  * **Data Quality**: Total rows, Valid rows, Missing/Null counts, Null percentage, and Unique count.
-* **Live Frequency Distribution Histogram**: SVG/CSS bar chart with interactive hover tooltips showing row counts and percentages per bin.
-* **Categorical Breakdown**: Frequency bars for top categories in text columns.
+---
 
-### 🧪 Dedicated "Sample Mode"
-* Don't have a CSV on hand? Click **`🧪 Sample Mode`** in the header.
-* Instantly loads **100 sales orders** (`ecommerce_sales`) and **60 employee records** (`employee_salaries`).
-* Activates guided query chips (`Sales by Category`, `Salaries by Dept`, `Top Orders > $500`, `High Performers`).
-* Click **`Exit`** anytime to wipe the demo tables and return to a blank workspace.
+## 🧪 Hypothesis Testing & Business Models
 
-### 💾 Portability & Export
-* **Export `.db` / `.sqlite`**: Save your in-memory SQLite database as a standard binary SQLite file, ready for production backends or Python scripts.
-* **Open `.db`**: Load existing `.sqlite` or `.db` files from your computer.
-* **Export Results**: Download filtered SQL query results to **CSV** or **JSON**.
+BabySQL includes an integrated statistical inference studio powered by **`jstat`** and **`simple-statistics`**, computing exact distribution CDFs, quantiles, and $p$-values in **under 2 milliseconds**:
+
+| Test / Model | Primary Business Question | Key Outputs |
+| :--- | :--- | :--- |
+| **Two-Sample Welch's $t$-Test** | Did Variant B generate higher revenue or conversions than Variant A (A/B testing)? | $t$-statistic, $p$-value, Welch's $df$, 95% CI of difference, Cohen's $d$ effect size |
+| **One-Sample $t$-Test** | Does our team's resolution time or CSAT significantly deviate from our SLA benchmark? | $t$-stat, $p$-value, sample mean vs benchmark target, 95% Confidence Interval |
+| **Paired Samples $t$-Test** | Did employee output or customer satisfaction improve after training (before vs after)? | Mean difference, $t$-stat, $p$-value, effect size |
+| **One-Way ANOVA ($F$-Test)** | Does average store revenue differ across our 4 regional territories or marketing channels? | Between/Within variance, $F$-ratio, $p$-value, $\eta^2$ (Eta-squared variance explained) |
+| **Chi-Square Independence ($\chi^2$)** | Is customer churn dependent on payment method or subscription tier? | Contingency matrix, observed vs expected counts, $\chi^2$, $p$-value, Cramér's $V$ |
+| **Pearson Correlation** | Does ad spend have a positive, negative, or neutral correlation with conversions? | Correlation coefficient ($r$), $t$-stat, $p$-value, shared variance ($r^2$) |
+| **OLS Linear Regression** | How many dollars in revenue do we gain for every additional $1 spent on Google Ads? | Coefficients ($\beta_0, \beta_1$), Standard Errors, $t$-values, $p$-values, $R^2$, Model $F$-test |
+| **Mann-Whitney $U$ Test** | How do we compare cohorts when data is heavily skewed or non-normal? | $U$-statistic, standardized $Z$-score, $p$-value, median comparisons |
+
+### 📝 Automated Executive Business Narratives
+Every statistical test generates a **clear, MBA-level plain-English narrative** translating raw math into actionable business advice:
+> *"We reject the null hypothesis (p = 0.0142 < 0.05). There is a statistically significant difference in revenue between 'Variant A' and 'Variant B'. Group 'Variant B' averages $24.50 higher than 'Variant A' (18.4% lift), representing a moderate effect size (Cohen's d = 0.62)."*
+
+---
+
+## 🎲 Dataset Sampling & Simulation
+
+BabySQL provides built-in sampling to test small-sample behavior, simulate theoretical scenarios, and generate balanced cohorts:
+
+### 1. Resample Existing Tables
+* **Fisher-Yates Shuffle**: In-place $O(N)$ mathematically unbiased uniform random permutation.
+* **Fixed Sample Size ($N$)** or **Percentage (%)**: Extract representative subsets of any table.
+* **Stratified Random Sampling**: Balances sample sizes across categorical groups (e.g., exactly 25 rows per department or variant).
+* **Bootstrap Resampling**: Resampling with replacement to construct empirical confidence intervals.
+* **Systematic Sampling**: Samples every $k$-th record in sequence.
+
+### 2. Theoretical Distribution Simulations (jStat Generators)
+Generate synthetic Monte Carlo datasets and save them directly as SQLite tables:
+* **Normal (Gaussian)**: $\text{Normal}(\mu, \sigma)$ bell curve (e.g. simulated heights, test scores, error rates).
+* **Uniform**: $\text{Uniform}(a, b)$ flat probability range.
+* **Student's $t$**: $\text{Student-}t(df)$ heavy-tailed distribution.
+* **Chi-Square**: $\chi^2(df)$ skewed variance distribution.
+* **Gamma & Beta**: Distribution of rates, waiting times, and bounded proportions.
+* **Exponential**: $\text{Exponential}(\lambda)$ inter-arrival times.
+
+---
+
+## 📖 Statistical Decision Guide
+
+Click **`📖 Stats Guide`** in the top bar to open the built-in **Executive Statistical Handbook & Decision Tree**:
+* **"Which test should I pick?"** decision matrix based on your research objective.
+* Data requirements (continuous vs categorical variables, sample size minimums).
+* Underlying assumptions (normality, independence, homoscedasticity, Cochran's condition).
+* How to interpret outputs ($p$-values, confidence intervals, effect sizes).
 
 ---
 
@@ -90,6 +130,7 @@ Traditional database GUI tools (DBeaver, Beekeeper Studio, DB Browser for SQLite
 
 ### 1. The Easiest Way (Windows 1-Click)
 In the project directory, simply double-click **`run.bat`**.
+* Auto-detects Node.js or Python.
 * Launches the local server and opens [http://localhost:3000](http://localhost:3000) in your browser.
 * *(Tip)*: Right-click `run.bat` → *Send to* → *Desktop (create shortcut)* for a permanent desktop icon!
 
@@ -103,11 +144,11 @@ You can run BabySQL locally using the bundled CLI runner:
 # Start directly with Node
 node ./bin/babysql.js
 
-# Or with custom port
+# Or specify a custom port
 node ./bin/babysql.js --port 8080
 ```
 
-*(When published to npm, you can run `npx babysql` on any machine with zero installation).*
+*(When published to npm, run `npx babysql` on any machine with zero installation).*
 
 ---
 
@@ -124,7 +165,7 @@ npm install
 # Start development server with hot-reload
 npm run dev
 
-# Build the ultra-compact production bundle (~1 MB)
+# Build the ultra-compact production bundle (~1.09 MB)
 npm run build
 ```
 
@@ -151,12 +192,12 @@ BabySQL is a Progressive Web App (PWA):
 
 ## ⚡ Load Capacity & Benchmarks
 
-| Rows | CSV Size | Ingestion Speed | SQL Execution | Statistical Profiling | Experience |
+| Rows | CSV Size | Ingestion Speed | SQL Execution | Hypothesis Tests | Experience |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **100 – 10,000** | < 2 MB | **< 100 ms** | < 1 ms | < 5 ms | Instantaneous |
-| **10,000 – 100,000** | 2 MB – 25 MB | **~0.5 – 1.5s** | 2 – 15 ms | 15 – 30 ms | Butter-smooth (Sweet Spot) |
-| **100,000 – 400,000** | 25 MB – 80 MB | **~3 – 6s** | 20 – 60 ms | 60 – 150 ms | Very practical & responsive |
-| **> 800,000** | > 150 MB | ~15 – 30s | 100 – 300 ms | ~400 ms | Browser heap ceiling |
+| **100 – 10,000** | < 2 MB | **< 100 ms** | < 1 ms | < 2 ms | Instantaneous |
+| **10,000 – 100,000** | 2 MB – 25 MB | **~0.5 – 1.5s** | 2 – 15 ms | 5 – 15 ms | Butter-smooth (Sweet Spot) |
+| **100,000 – 400,000** | 25 MB – 80 MB | **~3 – 6s** | 20 – 60 ms | 20 – 50 ms | Very practical & responsive |
+| **> 800,000** | > 150 MB | ~15 – 30s | 100 – 300 ms | ~150 ms | Browser heap ceiling |
 
 ---
 
@@ -166,6 +207,7 @@ Located in the `samples/` directory for immediate testing:
 
 * [`samples/ecommerce_sales.csv`](samples/ecommerce_sales.csv): **100 rows** of order IDs, customer names, product categories, prices, quantities, discounts, total revenue, ratings, and delivery days.
 * [`samples/employee_salaries.csv`](samples/employee_salaries.csv): **60 rows** of employee IDs, departments, job titles, experience years, base salaries, bonus percentages, and performance scores.
+* [`samples/ab_test_experiment.csv`](samples/ab_test_experiment.csv): **100 rows** of user IDs, test variants (Control vs Treatment), devices, time spent, pages viewed, conversions, and revenue.
 
 ---
 
@@ -176,17 +218,19 @@ Located in the `samples/` directory for immediate testing:
 | `Ctrl + Enter` / `Cmd + Enter` | Run active SQL query |
 | `Click on any cell` | Copies cell value to clipboard with confirmation |
 | `Click column header` | Toggles ascending / descending sort |
-| `Escape` | Closes CSV uploader modal |
+| `Escape` | Closes any open modal (CSV Uploader, Sampling, Guide) |
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack & Optimization
 
 * **SQLite Engine**: [`sql.js`](https://sql.js.org/) (Official WebAssembly port of SQLite 3.x)
+* **Statistical Inference**: [`jstat`](https://github.com/jstat/jstat) (Exact CDFs, PDFs, Student-t, Chi-square, Fisher's F)
+* **Mathematical Modeling**: [`simple-statistics`](https://simplestatistics.org/) (OLS linear regression, correlation)
 * **Frontend**: React 18, TypeScript, Tailwind CSS
 * **CSV Engine**: [`PapaParse`](https://www.papaparse.com/) (Streaming chunked CSV parser)
 * **Icons**: [`lucide-react`](https://lucide.dev/)
-* **Bundler**: Vite 4
+* **Bundler**: Vite 4 (Production build: **~412 kB JS / 126 kB gzipped**)
 
 ---
 
