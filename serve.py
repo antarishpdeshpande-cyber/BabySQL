@@ -19,19 +19,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return "application/wasm"
         if path.endswith(".js") or path.endswith(".mjs"):
             return "application/javascript"
-        return super().guess_type(path)
+    def log_message(self, format, *args):
+        sys.stdout.write(f"[{self.log_date_time_string()}] {args[0]} {args[1]}\n")
+        sys.stdout.flush()
+
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
-    with socketserver.TCPServer(("", port), Handler) as httpd:
-        print(f"BabySQL server running at: http://localhost:{port}")
-        print("Serving from:", DIRECTORY)
-        print("Press Ctrl+C to stop.")
+    server_address = ("127.0.0.1", port)
+    with ReusableTCPServer(server_address, Handler) as httpd:
+        print(f"BabySQL server running at: http://localhost:{port}", flush=True)
+        print(f"Serving from: {DIRECTORY}", flush=True)
+        print("Press Ctrl+C to stop.", flush=True)
         try:
-            webbrowser.open(f"http://localhost:{port}")
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nShutting down BabySQL server.")
+            print("\nShutting down BabySQL server.", flush=True)
 
 if __name__ == "__main__":
     main()

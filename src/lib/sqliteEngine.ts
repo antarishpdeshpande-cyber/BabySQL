@@ -7,9 +7,8 @@ let SQL: any = null;
 export async function getSqlEngine(): Promise<any> {
   if (SQL) return SQL;
   SQL = await initSqlJs({
-    locateFile: (file: string) => {
-      // Served locally from public/sql-wasm.wasm
-      return `/${file}`;
+    locateFile: (_file: string) => {
+      return '/sql-wasm.wasm';
     },
   });
   return SQL;

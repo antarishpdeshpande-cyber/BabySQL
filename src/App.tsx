@@ -14,7 +14,7 @@ import {
   resetDatabase,
 } from './lib/sqliteEngine';
 import { ingestCsvString } from './lib/csvParser';
-import { SAMPLE_SALES_CSV, SAMPLE_CUSTOMERS_CSV } from './lib/sampleData';
+import { SAMPLE_SALES_CSV, SAMPLE_SALARIES_CSV } from './lib/sampleData';
 import { TableMeta, QueryResult } from './types';
 import { Table, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -56,7 +56,7 @@ export const App: React.FC = () => {
         await initDatabase();
         // Load default sample datasets
         await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
-        await ingestCsvString(SAMPLE_CUSTOMERS_CSV, { tableName: 'customer_profiles' });
+        await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
         refreshTables();
         const initialRes = executeQuery('SELECT * FROM ecommerce_sales LIMIT 50;');
         setQueryResult(initialRes);
@@ -132,10 +132,10 @@ export const App: React.FC = () => {
   const handleLoadSampleData = async () => {
     try {
       await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
-      await ingestCsvString(SAMPLE_CUSTOMERS_CSV, { tableName: 'customer_profiles' });
+      await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
       refreshTables();
       handleSelectTableQuery('ecommerce_sales');
-      showToast('Sample e-commerce & customer tables loaded.');
+      showToast('Sample tables loaded: ecommerce_sales (100 rows) & employee_salaries (60 rows).');
     } catch (err: any) {
       showToast(`Failed to load samples: ${err.message}`, 'error');
     }
