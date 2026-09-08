@@ -307,7 +307,9 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="p-1 rounded hover:bg-surface-raised text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Previous Page"
+            title="Previous Page"
+            className="p-1 rounded hover:bg-surface-raised text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
@@ -317,7 +319,9 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="p-1 rounded hover:bg-surface-raised text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Next Page"
+            title="Next Page"
+            className="p-1 rounded hover:bg-surface-raised text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
