@@ -1,12 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Search, ChevronLeft, ChevronRight, Copy, Check, AlertCircle, Clock, Database } from 'lucide-react';
+import { Download, Search, ChevronLeft, ChevronRight, Copy, Check, AlertCircle, Clock, Database, Upload, FlaskConical } from 'lucide-react';
 import { QueryResult } from '../types';
 
 interface ResultsGridProps {
   result: QueryResult | null;
+  onOpenUploader?: () => void;
+  onLaunchSampleMode?: () => void;
 }
 
-export const ResultsGrid: React.FC<ResultsGridProps> = ({ result }) => {
+export const ResultsGrid: React.FC<ResultsGridProps> = ({
+  result,
+  onOpenUploader,
+  onLaunchSampleMode,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState<boolean>(true);
@@ -113,11 +119,33 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({ result }) => {
   if (!result) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-muted select-none">
-        <Database className="w-12 h-12 stroke-[1.2] text-border mb-3" />
-        <p className="text-sm font-medium text-slate-300">No Query Executed Yet</p>
+        <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-primary mb-3 shadow-inner">
+          <Database className="w-7 h-7 stroke-[1.5]" />
+        </div>
+        <p className="text-sm font-semibold text-slate-200">Welcome to BabySQL</p>
         <p className="text-xs text-muted max-w-sm text-center mt-1">
-          Type an SQL query above and press Ctrl+Enter or select a table from the sidebar.
+          Ingest your own CSV file to start querying, or launch Sample Mode to explore demo datasets with guided queries.
         </p>
+        <div className="flex items-center gap-2.5 mt-4">
+          {onOpenUploader && (
+            <button
+              onClick={onOpenUploader}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-slate-950 font-medium text-xs transition-all active:scale-95"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Ingest CSV</span>
+            </button>
+          )}
+          {onLaunchSampleMode && (
+            <button
+              onClick={onLaunchSampleMode}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 text-xs font-medium transition-all"
+            >
+              <FlaskConical className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Launch Sample Mode</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }

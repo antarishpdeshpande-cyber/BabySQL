@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Play, Eraser, Terminal, Sparkles } from 'lucide-react';
-import { QUICK_QUERIES } from '../lib/sampleData';
+import { Play, Eraser, Terminal, Sparkles, FlaskConical, X } from 'lucide-react';
+import { QueryChip } from '../lib/sampleData';
 
 interface SqlEditorProps {
   query: string;
@@ -8,6 +8,9 @@ interface SqlEditorProps {
   onExecute: () => void;
   onClear: () => void;
   isExecuting?: boolean;
+  queryChips?: QueryChip[];
+  isSampleMode?: boolean;
+  onExitSampleMode?: () => void;
 }
 
 export const SqlEditor: React.FC<SqlEditorProps> = ({
@@ -16,6 +19,9 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
   onExecute,
   onClear,
   isExecuting = false,
+  queryChips = [],
+  isSampleMode = false,
+  onExitSampleMode,
 }) => {
   // Ctrl + Enter shortcut
   useEffect(() => {
@@ -74,21 +80,47 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
         />
       </div>
 
-      {/* Quick Query Chips */}
+      {/* Contextual / Sample Query Chips */}
       <div className="px-3 pb-2.5 flex items-center gap-1.5 overflow-x-auto text-xs">
-        <span className="text-[11px] text-muted flex items-center gap-1 flex-shrink-0">
-          <Sparkles className="w-3 h-3 text-cyan-400" />
-          Quick Queries:
-        </span>
-        {QUICK_QUERIES.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => onChange(item.query)}
-            className="px-2 py-0.5 rounded-full bg-surface-raised hover:bg-border text-slate-300 text-[11px] border border-border/80 flex-shrink-0 transition-all"
-          >
-            {item.label}
-          </button>
-        ))}
+        {isSampleMode ? (
+          <div className="flex items-center gap-1.5 flex-shrink-0 mr-1">
+            <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              <FlaskConical className="w-3 h-3 text-emerald-400" />
+              Sample Mode
+            </span>
+            {onExitSampleMode && (
+              <button
+                onClick={onExitSampleMode}
+                className="text-[10px] text-muted hover:text-danger hover:underline flex items-center gap-0.5"
+                title="Exit Sample Mode and clear demo tables"
+              >
+                <X className="w-2.5 h-2.5" />
+                <span>Exit</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <span className="text-[11px] text-muted flex items-center gap-1 flex-shrink-0">
+            <Sparkles className="w-3 h-3 text-cyan-400" />
+            {queryChips.length > 0 ? 'Table Shortcuts:' : 'Shortcuts:'}
+          </span>
+        )}
+
+        {queryChips.length > 0 ? (
+          queryChips.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => onChange(item.query)}
+              className="px-2 py-0.5 rounded-full bg-surface-raised hover:bg-border text-slate-300 text-[11px] border border-border/80 flex-shrink-0 transition-all hover:text-white"
+            >
+              {item.label}
+            </button>
+          ))
+        ) : (
+          <span className="text-[11px] text-muted italic">
+            Ingest a CSV or enable Sample Mode in header to load test queries.
+          </span>
+        )}
       </div>
     </div>
   );

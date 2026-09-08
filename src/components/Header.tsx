@@ -1,11 +1,12 @@
 import React, { useRef } from 'react';
-import { Database, Upload, Download, FolderOpen, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Database, Upload, Download, FolderOpen, RefreshCw, FlaskConical } from 'lucide-react';
 
 interface HeaderProps {
   onOpenUploader: () => void;
   onExportDb: () => void;
   onImportDb: (file: File) => void;
-  onLoadSampleData: () => void;
+  onToggleSampleMode: () => void;
+  isSampleMode: boolean;
   onResetDb: () => void;
   isReady: boolean;
   tableCount: number;
@@ -15,7 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUploader,
   onExportDb,
   onImportDb,
-  onLoadSampleData,
+  onToggleSampleMode,
+  isSampleMode,
   onResetDb,
   isReady,
   tableCount,
@@ -61,12 +63,16 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
-          onClick={onLoadSampleData}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface-raised hover:bg-border text-slate-200 text-xs border border-border transition-all"
-          title="Load sample e-commerce sales and customers datasets"
+          onClick={onToggleSampleMode}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all ${
+            isSampleMode
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 font-medium'
+              : 'bg-surface-raised hover:bg-border text-slate-200 border-border'
+          }`}
+          title={isSampleMode ? 'Exit Sample Mode' : 'Enter Sample Mode to explore demo datasets'}
         >
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Sample Data</span>
+          <FlaskConical className={`w-3.5 h-3.5 ${isSampleMode ? 'text-emerald-400' : 'text-slate-400'}`} />
+          <span>{isSampleMode ? 'Sample Mode (Active)' : 'Sample Mode'}</span>
         </button>
 
         <input

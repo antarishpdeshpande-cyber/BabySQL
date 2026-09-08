@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { SqlEditor } from './components/SqlEditor';
@@ -14,14 +14,21 @@ import {
   resetDatabase,
 } from './lib/sqliteEngine';
 import { ingestCsvString } from './lib/csvParser';
-import { SAMPLE_SALES_CSV, SAMPLE_SALARIES_CSV } from './lib/sampleData';
+import {
+  SAMPLE_SALES_CSV,
+  SAMPLE_SALARIES_CSV,
+  SAMPLE_MODE_QUERIES,
+  getDynamicTableQueries,
+} from './lib/sampleData';
 import { TableMeta, QueryResult } from './types';
-import { Table, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Table, BarChart2, CheckCircle2, AlertCircle, FlaskConical, Upload } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [tables, setTables] = useState<TableMeta[]>([]);
-  const [query, setQuery] = useState<string>('SELECT * FROM ecommerce_sales LIMIT 50;');
+  const [activeTableName, setActiveTableName] = useState<string>('');
+  const [isSampleMode, setIsSampleMode] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>('');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [activeTab, setActiveTab] = useState<'results' | 'stats'>('results');
   const [selectedStatsColumn, setSelectedStatsColumn] = useState<string>('');
@@ -54,12 +61,18 @@ export const App: React.FC = () => {
     const bootstrap = async () => {
       try {
         await initDatabase();
-        // Load default sample datasets
-        await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
-        await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
-        refreshTables();
-        const initialRes = executeQuery('SELECT * FROM ecommerce_sales LIMIT 50;');
-        setQueryResult(initialRes);
+        const existing = fetchTables();
+        setTables(existing);
+        if (existing.length > 0) {
+          setActiveTableName(existing[0].name);
+          const q = `SELECT * FROM "${existing[0].name}" LIMIT 50;`;
+          setQuery(q);
+          const res = executeQuery(q);
+          setQueryResult(res);
+        } else {
+          setQuery('');
+          setQueryResult(null);
+        }
         setIsReady(true);
       } catch (err: any) {
         console.error('Initialization error:', err);
@@ -68,9 +81,10 @@ export const App: React.FC = () => {
       }
     };
     bootstrap();
-  }, [refreshTables]);
+  }, []);
 
   const handleSelectTableQuery = (tableName: string) => {
+    setActiveTableName(tableName);
     const q = `SELECT * FROM "${tableName}" LIMIT 50;`;
     setQuery(q);
     runQuery(q);
@@ -78,6 +92,7 @@ export const App: React.FC = () => {
   };
 
   const handleProfileTable = (tableName: string) => {
+    setActiveTableName(tableName);
     const q = `SELECT * FROM "${tableName}";`;
     setQuery(q);
     const res = executeQuery(q);
@@ -88,6 +103,47 @@ export const App: React.FC = () => {
     }
     setActiveTab('stats');
   };
+
+  const handleToggleSampleMode = async () => {
+    if (!isSampleMode) {
+      try {
+        await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
+        await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
+        setIsSampleMode(true);
+        refreshTables();
+        handleSelectTableQuery('ecommerce_sales');
+        showToast('Sample Mode enabled: loaded demo sales & salaries tables.');
+      } catch (err: any) {
+        showToast(`Failed to enable sample mode: ${err.message}`, 'error');
+      }
+    } else {
+      if (window.confirm('Exit Sample Mode and clear demo tables?')) {
+        executeQuery('DROP TABLE IF EXISTS "ecommerce_sales";');
+        executeQuery('DROP TABLE IF EXISTS "employee_salaries";');
+        setIsSampleMode(false);
+        refreshTables();
+        const remaining = fetchTables();
+        if (remaining.length > 0) {
+          handleSelectTableQuery(remaining[0].name);
+        } else {
+          setQueryResult(null);
+          setQuery('');
+        }
+        showToast('Exited Sample Mode.');
+      }
+    }
+  };
+
+  const dynamicQueryChips = useMemo(() => {
+    if (isSampleMode) {
+      return SAMPLE_MODE_QUERIES;
+    }
+    const targetTable = activeTableName || (tables.length > 0 ? tables[0].name : '');
+    if (targetTable) {
+      return getDynamicTableQueries(targetTable);
+    }
+    return [];
+  }, [isSampleMode, activeTableName, tables]);
 
   const handleDropTable = (tableName: string) => {
     if (window.confirm(`Are you sure you want to drop table "${tableName}"?`)) {
@@ -129,21 +185,10 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleLoadSampleData = async () => {
-    try {
-      await ingestCsvString(SAMPLE_SALES_CSV, { tableName: 'ecommerce_sales' });
-      await ingestCsvString(SAMPLE_SALARIES_CSV, { tableName: 'employee_salaries' });
-      refreshTables();
-      handleSelectTableQuery('ecommerce_sales');
-      showToast('Sample tables loaded: ecommerce_sales (100 rows) & employee_salaries (60 rows).');
-    } catch (err: any) {
-      showToast(`Failed to load samples: ${err.message}`, 'error');
-    }
-  };
-
   const handleResetDb = async () => {
     if (window.confirm('Clear all tables and reset the SQLite database?')) {
       await resetDatabase();
+      setIsSampleMode(false);
       refreshTables();
       setQueryResult(null);
       setQuery('');
@@ -176,7 +221,8 @@ export const App: React.FC = () => {
         onOpenUploader={() => setIsUploaderOpen(true)}
         onExportDb={handleExportDb}
         onImportDb={handleImportDb}
-        onLoadSampleData={handleLoadSampleData}
+        onToggleSampleMode={handleToggleSampleMode}
+        isSampleMode={isSampleMode}
         onResetDb={handleResetDb}
         isReady={isReady}
         tableCount={tables.length}
@@ -201,6 +247,9 @@ export const App: React.FC = () => {
             onExecute={() => runQuery(query)}
             onClear={() => setQuery('')}
             isExecuting={isExecuting}
+            queryChips={dynamicQueryChips}
+            isSampleMode={isSampleMode}
+            onExitSampleMode={handleToggleSampleMode}
           />
 
           {/* Tab Navigation */}
@@ -243,7 +292,11 @@ export const App: React.FC = () => {
           {/* Bottom Half: Result Grid OR Statistical Profiler */}
           <div className="flex-1 flex flex-col min-h-0">
             {activeTab === 'results' ? (
-              <ResultsGrid result={queryResult} />
+              <ResultsGrid
+                result={queryResult}
+                onOpenUploader={() => setIsUploaderOpen(true)}
+                onLaunchSampleMode={handleToggleSampleMode}
+              />
             ) : (
               <StatsDrawer
                 columns={queryResult?.columns || []}

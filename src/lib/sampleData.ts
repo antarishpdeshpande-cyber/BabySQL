@@ -164,7 +164,33 @@ EMP059,Simran Aggarwal,Marketing,Content Specialist,11,85842,12,4.91,Onsite
 EMP060,Natasha Choudhury,Engineering,Software Engineer,2,82075,5,4.49,Hybrid
 `;
 
-export const QUICK_QUERIES = [
+export interface QueryChip {
+  label: string;
+  query: string;
+}
+
+export function getDynamicTableQueries(tableName: string): QueryChip[] {
+  return [
+    {
+      label: `Preview ${tableName}`,
+      query: `SELECT * FROM "${tableName}" LIMIT 50;`,
+    },
+    {
+      label: `Count Rows`,
+      query: `SELECT COUNT(*) AS total_rows FROM "${tableName}";`,
+    },
+    {
+      label: `Schema Info`,
+      query: `PRAGMA table_info("${tableName}");`,
+    },
+    {
+      label: `Sorted (Latest 25)`,
+      query: `SELECT * FROM "${tableName}" ORDER BY 1 DESC LIMIT 25;`,
+    },
+  ];
+}
+
+export const SAMPLE_MODE_QUERIES: QueryChip[] = [
   {
     label: 'Sales by Category',
     query: `SELECT 
@@ -178,7 +204,7 @@ GROUP BY category
 ORDER BY total_revenue DESC;`,
   },
   {
-    label: 'Salaries by Department',
+    label: 'Salaries by Dept',
     query: `SELECT 
   department, 
   COUNT(*) AS headcount, 
@@ -191,21 +217,21 @@ GROUP BY department
 ORDER BY avg_salary DESC;`,
   },
   {
-    label: 'Top High-Value Orders',
+    label: 'Top Orders (> $500)',
     query: `SELECT order_id, customer_name, category, total_amount, rating, payment_method
 FROM ecommerce_sales
 WHERE total_amount > 500
 ORDER BY total_amount DESC;`,
   },
   {
-    label: 'Top Performers by Salary',
+    label: 'High Performers',
     query: `SELECT full_name, department, job_title, experience_years, base_salary, performance_score
 FROM employee_salaries
 WHERE performance_score >= 4.5
 ORDER BY base_salary DESC;`,
   },
   {
-    label: 'Table Schema Check',
+    label: 'Order Schema',
     query: `PRAGMA table_info("ecommerce_sales");`,
   },
 ];
