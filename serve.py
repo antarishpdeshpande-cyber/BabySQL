@@ -31,8 +31,7 @@ def main():
             webbrowser.open(f"http://localhost:{port}")
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("
-Shutting down BabySQL server.")
+            print("\nShutting down BabySQL server.")
 
 if __name__ == "__main__":
     main()
