@@ -97,7 +97,9 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ isOpen, onClose, onIng
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-surface-raised text-muted hover:text-slate-200 transition-all"
+            aria-label="Close uploader"
+            title="Close"
+            className="p-1 rounded hover:bg-surface-raised text-muted hover:text-slate-200 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-4 h-4" />
           </button>
