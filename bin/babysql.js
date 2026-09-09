@@ -4,7 +4,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,6 +106,25 @@ function startServer(port) {
       openBrowser(url);
     }
   });
+}
+
+const indexPath = path.join(DIST_DIR, 'index.html');
+if (!fs.existsSync(indexPath)) {
+  const zipPath = path.join(__dirname, '..', 'dist.zip');
+  if (fs.existsSync(zipPath)) {
+    try {
+      console.log('\x1b[36m[SETUP] Extracting production build from dist.zip...\x1b[0m');
+      execSync(`tar -xf "${zipPath}"`, { cwd: path.join(__dirname, '..'), stdio: 'ignore' });
+    } catch {
+      // fallback
+    }
+  }
+}
+
+if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+  console.error('\n\x1b[31m[ERROR] BabySQL production build (dist/index.html) not found.\x1b[0m');
+  console.error('Please run \x1b[33mnpm run build\x1b[0m or launch via \x1b[32mrun.bat\x1b[0m to configure automatically.\n');
+  process.exit(1);
 }
 
 startServer(PORT);

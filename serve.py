@@ -7,6 +7,17 @@ import webbrowser
 PORT = 3000
 DIRECTORY = os.path.join(os.path.dirname(__file__), "dist")
 
+if not os.path.exists(DIRECTORY) or not os.path.exists(os.path.join(DIRECTORY, "index.html")):
+    zip_path = os.path.join(os.path.dirname(__file__), "dist.zip")
+    if os.path.exists(zip_path):
+        import zipfile
+        try:
+            print("[SETUP] Extracting production build from dist.zip...")
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(os.path.dirname(__file__))
+        except Exception as e:
+            print(f"[WARN] Failed to auto-extract dist.zip: {e}")
+
 if not os.path.exists(DIRECTORY):
     DIRECTORY = os.path.dirname(__file__)
 

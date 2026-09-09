@@ -58,6 +58,36 @@ Traditional database GUI tools (DBeaver, Beekeeper Studio, DB Browser for SQLite
 
 ---
 
+## 🚀 Quickstart (Totally Standalone — Zero Setup)
+
+BabySQL is designed to run **100% standalone** out of the box with **zero build steps** and **no required npm packages**:
+
+### Option 1: Windows (One-Click)
+Simply double-click **`run.bat`** in the repository root.
+* Automatically finds Node.js or Python.
+* Uses the pre-compiled, self-contained `dist/` bundle.
+* Launches [http://localhost:3000](http://localhost:3000) directly in your browser.
+
+### Option 2: macOS / Linux (One-Click)
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+### Option 3: Python (Zero Node.js Required)
+```bash
+python serve.py
+```
+
+### Option 4: Node.js (Zero npm install Required)
+```bash
+node bin/babysql.js
+```
+
+*(If you are modifying the source code: run `npm install` followed by `npm run dev`.)*
+
+---
+
 ## ✨ Key Features
 
 ### 📥 Instant Drag-and-Drop CSV Ingestion
