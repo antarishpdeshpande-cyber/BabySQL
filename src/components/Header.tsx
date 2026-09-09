@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Database, Upload, Download, FolderOpen, RefreshCw, FlaskConical, Dice5, BookOpen } from 'lucide-react';
+import { Database, Upload, Download, FolderOpen, RefreshCw, FlaskConical, Dice5, BookOpen, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   onOpenUploader: () => void;
@@ -12,6 +12,8 @@ interface HeaderProps {
   tableCount: number;
   onOpenSampling?: () => void;
   onOpenGuide?: () => void;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   tableCount,
   onOpenSampling,
   onOpenGuide,
+  theme,
+  onToggleTheme,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,7 +49,10 @@ export const Header: React.FC<HeaderProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-base tracking-tight text-white">BabySQL</span>
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            <span className="text-[10px] uppercase font-mono font-semibold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
+              Enterprise BRM Platform
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-raised text-muted border border-border">
               v1.0 • Local
             </span>
           </div>
@@ -60,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenUploader}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-slate-950 font-medium text-xs shadow-sm transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-white dark:text-slate-950 font-medium text-xs shadow-sm transition-all active:scale-95"
         >
           <Upload className="w-3.5 h-3.5" />
           <span>Ingest CSV</span>
@@ -70,22 +77,22 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onToggleSampleMode}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-all ${
             isSampleMode
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 font-medium'
-              : 'bg-surface-raised hover:bg-border text-slate-200 border-border'
+              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 font-medium'
+              : 'bg-surface-raised hover:bg-border text-slate-700 dark:text-slate-200 border-border'
           }`}
           title={isSampleMode ? 'Exit Sample Mode' : 'Enter Sample Mode to explore demo datasets'}
         >
-          <FlaskConical className={`w-3.5 h-3.5 ${isSampleMode ? 'text-emerald-400' : 'text-slate-400'}`} />
+          <FlaskConical className={`w-3.5 h-3.5 ${isSampleMode ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400'}`} />
           <span>{isSampleMode ? 'Sample Mode (Active)' : 'Sample Mode'}</span>
         </button>
 
         {onOpenSampling && (
           <button
             onClick={onOpenSampling}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-surface-raised hover:bg-border text-slate-200 text-xs border border-border transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-surface-raised hover:bg-border text-slate-700 dark:text-slate-200 text-xs border border-border transition-all"
             title="Create a sample of an existing table or simulate theoretical distributions"
           >
-            <Dice5 className="w-3.5 h-3.5 text-cyan-400" />
+            <Dice5 className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
             <span>Sample / Simulate</span>
           </button>
         )}
@@ -93,10 +100,10 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenGuide && (
           <button
             onClick={onOpenGuide}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-300 text-xs border border-transparent hover:border-border transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-surface-raised hover:bg-border text-slate-700 dark:text-slate-200 text-xs border border-border transition-all"
             title="Statistical Decision Framework & When-to-Use Reference Guide"
           >
-            <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+            <BookOpen className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
             <span>Stats Guide</span>
           </button>
         )}
@@ -111,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-300 text-xs border border-transparent hover:border-border transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-600 dark:text-slate-300 text-xs border border-transparent hover:border-border transition-all"
           title="Open .sqlite or .db file from your local disk"
         >
           <FolderOpen className="w-3.5 h-3.5" />
@@ -120,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           onClick={onExportDb}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-300 text-xs border border-transparent hover:border-border transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-surface-raised text-slate-600 dark:text-slate-300 text-xs border border-transparent hover:border-border transition-all"
           title="Save and download the full SQLite database file to disk"
         >
           <Download className="w-3.5 h-3.5" />
@@ -128,6 +135,19 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div className="h-4 w-[1px] bg-border mx-1" />
+
+        {/* Minimalist Theme Toggle (Light / Dark) */}
+        <button
+          onClick={onToggleTheme}
+          className="p-1.5 rounded-md hover:bg-surface-raised text-muted hover:text-slate-800 dark:hover:text-slate-200 transition-all border border-transparent hover:border-border"
+          title={theme === 'dark' ? 'Switch to Minimalist Light Theme' : 'Switch to Dark Theme'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-3.5 h-3.5 text-amber-400" />
+          ) : (
+            <Moon className="w-3.5 h-3.5 text-slate-600" />
+          )}
+        </button>
 
         <button
           onClick={onResetDb}

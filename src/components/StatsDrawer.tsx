@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart2, Sigma, Hash, Percent, Layers, TrendingUp, Info } from 'lucide-react';
 import { calculateDescriptiveStats } from '../lib/statsEngine';
+import { DistributionGraphs } from './DistributionGraphs';
 
 interface StatsDrawerProps {
   columns: string[];
@@ -16,6 +17,21 @@ export const StatsDrawer: React.FC<StatsDrawerProps> = ({ columns, values, initi
     if (colIndex === -1 || !values.length) return [];
     return values.map((r) => r[colIndex]);
   }, [colIndex, values]);
+
+  const numericValues = useMemo(() => {
+    return colValues
+      .map((v) => {
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') {
+          const cleaned = v.replace(/[$,]/g, '').trim();
+          if (cleaned === '') return null;
+          const p = Number(cleaned);
+          return isNaN(p) ? null : p;
+        }
+        return null;
+      })
+      .filter((v): v is number => v !== null && isFinite(v));
+  }, [colValues]);
 
   const stats = useMemo(() => {
     if (!selectedCol || colIndex === -1) return null;
@@ -174,6 +190,11 @@ export const StatsDrawer: React.FC<StatsDrawerProps> = ({ columns, values, initi
                     <span>Max: {stats.max}</span>
                   </div>
                 </div>
+              )}
+
+              {/* Low-Graphic Distribution Graphs: Boxplot & KDE Density Curve */}
+              {numericValues.length > 2 && (
+                <DistributionGraphs values={numericValues} metricName={selectedCol} />
               )}
             </div>
           ) : (

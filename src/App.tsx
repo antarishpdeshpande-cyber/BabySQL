@@ -41,6 +41,24 @@ export const App: React.FC = () => {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('babysql_theme');
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('babysql_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -211,7 +229,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-slate-100 overflow-hidden select-none">
+    <div className="h-screen flex flex-col bg-background text-slate-900 dark:text-slate-100 overflow-hidden select-none">
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-lg bg-surface border border-border shadow-xl text-xs">
@@ -236,6 +254,8 @@ export const App: React.FC = () => {
         tableCount={tables.length}
         onOpenSampling={() => setIsSamplingOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Workspace: Sidebar + Workspace */}

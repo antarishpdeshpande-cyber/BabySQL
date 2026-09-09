@@ -8,16 +8,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#0a0e17",
-        surface: "#111827",
-        "surface-raised": "#1a2234",
-        border: "#1f293d",
-        primary: "#06b6d4",
-        "primary-hover": "#0891b2",
-        accent: "#10b981",
-        muted: "#64748b",
-        danger: "#f43f5e",
-        warning: "#f59e0b",
+        background: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        "surface-raised": "var(--color-surface-raised)",
+        border: "var(--color-border)",
+        primary: "var(--color-primary)",
+        "primary-hover": "var(--color-primary-hover)",
+        accent: "var(--color-accent)",
+        muted: "var(--color-muted)",
+        danger: "var(--color-danger)",
+        warning: "var(--color-warning)",
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

@@ -6,7 +6,14 @@ export type HypothesisTestType =
   | 'chi_square'
   | 'correlation'
   | 'linear_regression'
-  | 'mann_whitney';
+  | 'mann_whitney'
+  | 'multiple_regression'
+  | 'logistic_regression'
+  | 'proportion_ztest'
+  | 'kruskal_wallis'
+  | 'wilcoxon_signed_rank'
+  | 'spearman_correlation'
+  | 'kmeans_clustering';
 
 export interface TestConfig {
   testType: HypothesisTestType;
@@ -14,7 +21,10 @@ export interface TestConfig {
   targetColumn: string;
   groupColumn?: string;
   secondaryColumn?: string;
+  predictorColumns?: string[];
   benchmarkValue?: number;
+  successValue?: string | number;
+  numClusters?: number; // for kmeans (e.g. 2, 3, 4, 5)
   alpha: number; // 0.01, 0.05, 0.10
   alternative: 'two-sided' | 'greater' | 'less';
 }
@@ -44,6 +54,8 @@ export interface GroupSummary {
   stdError: number;
   ciLower: number;
   ciUpper: number;
+  median?: number;
+  rankSum?: number;
 }
 
 export interface ContingencyData {
@@ -60,8 +72,69 @@ export interface RegressionModelCoefficients {
   variable: string;
   estimate: number;
   stdError: number;
-  tStat: number;
+  tStat?: number;
+  zStat?: number;
   pValue: number;
+  vif?: number;
+  oddsRatio?: number;
+  ciLower?: number;
+  ciUpper?: number;
+}
+
+export interface ConfusionMatrix {
+  tp: number;
+  fp: number;
+  fn: number;
+  tn: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+}
+
+export interface AssumptionDiagnostics {
+  skewness: number;
+  kurtosis: number;
+  jarqueBeraStat: number;
+  jarqueBeraPVal: number;
+  isNormal: boolean;
+  varianceRatio?: number;
+  recommendation?: string;
+}
+
+export interface ProportionComparisonData {
+  group1Name: string;
+  group2Name: string;
+  count1: number;
+  total1: number;
+  rate1: number;
+  count2: number;
+  total2: number;
+  rate2: number;
+  pooledRate: number;
+  difference: number;
+  liftPercent: number;
+  ciLower: number;
+  ciUpper: number;
+}
+
+export interface ClusterProfile {
+  clusterId: number;
+  name: string;
+  size: number;
+  percentage: number;
+  centroid: Record<string, number>;
+  wcss: number;
+}
+
+export interface ClusteringModelData {
+  k: number;
+  features: string[];
+  clusters: ClusterProfile[];
+  totalWcss: number;
+  bcss: number;
+  varianceExplained: number; // BCSS / TSS
+  iterations: number;
 }
 
 export interface HypothesisTestResult {
@@ -82,4 +155,8 @@ export interface HypothesisTestResult {
   regressionCoefficients?: RegressionModelCoefficients[];
   scatterData?: { x: number; y: number }[];
   regressionLine?: { slope: number; intercept: number; r2: number };
+  confusionMatrix?: ConfusionMatrix;
+  diagnostics?: AssumptionDiagnostics;
+  proportionData?: ProportionComparisonData;
+  clustering?: ClusteringModelData;
 }
