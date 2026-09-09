@@ -249,11 +249,11 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                   <th
                     key={col}
                     onClick={() => handleSort(col)}
-                    className="py-2 px-3 text-xs text-slate-300 hover:text-white font-medium cursor-pointer border-r border-border/40 transition-colors"
+                    className="py-2 px-3 text-xs text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white font-semibold cursor-pointer border-r border-border/40 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">{col}</span>
-                      <span className="text-[10px] text-cyan-400">
+                      <span className="text-[10px] text-cyan-500 dark:text-cyan-400">
                         {sortCol === col ? (sortAsc ? '▲' : '▼') : ''}
                       </span>
                     </div>
@@ -278,7 +278,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                           key={cIdx}
                           onClick={() => handleCopyCell(displayVal)}
                           className={`py-1.5 px-3 border-r border-border/40 truncate max-w-xs cursor-pointer group relative ${
-                            isNull ? 'text-muted italic' : isNum ? 'text-cyan-300' : 'text-slate-200'
+                            isNull ? 'text-muted italic' : isNum ? 'text-sky-900 dark:text-cyan-300 font-medium' : 'text-slate-900 dark:text-slate-200'
                           }`}
                           title="Click to copy value"
                         >

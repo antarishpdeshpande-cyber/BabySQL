@@ -76,7 +76,7 @@ export const SqlEditor: React.FC<SqlEditorProps> = ({
           placeholder="Enter SQL query here (e.g. SELECT * FROM table LIMIT 50;)..."
           rows={5}
           spellCheck={false}
-          className="w-full bg-background border border-border rounded-lg p-3 font-mono text-xs text-slate-200 placeholder:text-muted focus:outline-none focus:border-primary resize-y leading-relaxed"
+          className="w-full bg-background border border-border rounded-lg p-3 font-mono text-xs text-slate-900 dark:text-slate-200 placeholder:text-muted focus:outline-none focus:border-primary resize-y leading-relaxed font-medium"
         />
       </div>
 

@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       )}
                     </span>
                     <Table className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span className="text-xs font-medium text-slate-200 truncate group-hover:text-white" title={table.name}>
+                    <span className="text-xs font-medium text-slate-900 dark:text-slate-200 truncate group-hover:text-cyan-700 dark:group-hover:text-white" title={table.name}>
                       {table.name}
                     </span>
                   </div>

@@ -289,14 +289,14 @@ export const App: React.FC = () => {
                 onClick={() => setActiveTab('results')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs font-medium transition-all ${
                   activeTab === 'results'
-                    ? 'bg-surface-raised text-cyan-400 border-b-2 border-primary'
-                    : 'text-muted hover:text-slate-200'
+                    ? 'bg-surface-raised text-cyan-700 dark:text-cyan-400 border-b-2 border-primary font-semibold'
+                    : 'text-slate-600 dark:text-muted hover:text-slate-950 dark:hover:text-slate-200'
                 }`}
               >
                 <Table className="w-3.5 h-3.5" />
                 <span>Query Results</span>
                 {queryResult && (
-                  <span className="text-[10px] font-mono px-1 rounded bg-background text-slate-300">
+                  <span className="text-[10px] font-mono px-1 rounded bg-background text-slate-700 dark:text-slate-300 font-medium">
                     {queryResult.rowCount}
                   </span>
                 )}
@@ -306,13 +306,13 @@ export const App: React.FC = () => {
                 onClick={() => setActiveTab('stats')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs font-medium transition-all ${
                   activeTab === 'stats'
-                    ? 'bg-surface-raised text-cyan-400 border-b-2 border-primary'
-                    : 'text-muted hover:text-slate-200'
+                    ? 'bg-surface-raised text-cyan-700 dark:text-cyan-400 border-b-2 border-primary font-semibold'
+                    : 'text-slate-600 dark:text-muted hover:text-slate-950 dark:hover:text-slate-200'
                 }`}
               >
                 <BarChart2 className="w-3.5 h-3.5" />
                 <span>Statistical Analysis</span>
-                <span className="text-[10px] uppercase font-mono px-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] uppercase font-mono px-1 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-semibold">
                   Stats
                 </span>
               </button>
@@ -321,13 +321,13 @@ export const App: React.FC = () => {
                 onClick={() => setActiveTab('hypothesis')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t text-xs font-medium transition-all ${
                   activeTab === 'hypothesis'
-                    ? 'bg-surface-raised text-cyan-400 border-b-2 border-primary'
-                    : 'text-muted hover:text-slate-200'
+                    ? 'bg-surface-raised text-cyan-700 dark:text-cyan-400 border-b-2 border-primary font-semibold'
+                    : 'text-slate-600 dark:text-muted hover:text-slate-950 dark:hover:text-slate-200'
                 }`}
               >
-                <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                <FlaskConical className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                 <span>Hypothesis Testing Studio</span>
-                <span className="text-[10px] uppercase font-mono px-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] uppercase font-mono px-1 rounded bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-semibold">
                   Business Models
                 </span>
               </button>

@@ -7,12 +7,12 @@
   --color-surface: #ffffff;
   --color-surface-raised: #f1f5f9;
   --color-border: #e2e8f0;
-  --color-primary: #0891b2;
-  --color-primary-hover: #0e7490;
-  --color-accent: #6366f1;
-  --color-muted: #64748b;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-accent: #4f46e5;
+  --color-muted: #3b5882;
+  --color-danger: #dc2626;
+  --color-warning: #d97706;
 }
 
 html.dark {
@@ -35,7 +35,7 @@ html.dark {
   }
 }
 
-/* Light mode seamless text & container adaptation */
+/* Light mode: Elegant Dark Blue Typography Hierarchy */
 html:not(.dark) {
   color-scheme: light;
 }
@@ -45,33 +45,81 @@ html.dark {
 }
 
 html:not(.dark) body {
-  color: #0f172a;
+  color: #0b1f3d;
 }
 
 html.dark body {
   color: #f8fafc;
 }
 
+/* Deep dark blue overrides for light mode */
+html:not(.dark) {
+  color: #0b1f3d;
+}
+
 html:not(.dark) .text-white {
-  color: #0f172a !important;
+  color: #07152b !important;
 }
 
 html:not(.dark) .text-slate-100 {
-  color: #0f172a !important;
+  color: #07152b !important;
 }
 
 html:not(.dark) .text-slate-200 {
-  color: #1e293b !important;
+  color: #0b1f3d !important;
 }
 
 html:not(.dark) .text-slate-300 {
-  color: #334155 !important;
+  color: #122d56 !important;
 }
 
 html:not(.dark) .text-slate-400 {
-  color: #64748b !important;
+  color: #1b3d6f !important;
 }
 
+html:not(.dark) .text-muted {
+  color: #325584 !important;
+}
+
+/* Numbers and cyan accents in light mode: deep dark sapphire / cobalt blue */
+html:not(.dark) .text-cyan-300,
+html:not(.dark) .text-cyan-400 {
+  color: #064075 !important;
+  font-weight: 600;
+}
+
+html:not(.dark) .text-cyan-200 {
+  color: #092c53 !important;
+}
+
+html:not(.dark) .text-cyan-500 {
+  color: #034b8c !important;
+}
+
+/* Inputs, textareas, and code blocks in light mode */
+html:not(.dark) textarea,
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) pre,
+html:not(.dark) code {
+  color: #07152b !important;
+}
+
+/* Tables in light mode */
+html:not(.dark) table {
+  color: #0b1f3d !important;
+}
+
+html:not(.dark) th {
+  color: #07152b !important;
+  font-weight: 600;
+}
+
+html:not(.dark) td {
+  color: #0b1f3d !important;
+}
+
+/* Containers and backgrounds in light mode */
 html:not(.dark) .bg-slate-900 {
   background-color: #f8fafc !important;
 }
