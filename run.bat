@@ -1,78 +1,105 @@
 @echo off
-title BabySQL Local Studio
+setlocal enabledelayedexpansion
+title BabySQL Enterprise BRM Platform
 cd /d "%~dp0"
 
 echo ===================================================
-echo   Starting BabySQL (Local SQLite ^& CSV Studio)
+echo   Starting BabySQL Enterprise BRM Platform
 echo ===================================================
 
-:: 1. Self-healing check: Ensure dist\index.html exists
+REM 1. Self-healing check: Ensure dist\index.html exists
 if not exist "dist\index.html" (
     echo [SETUP] Production bundle not found in dist\. Attempting automatic setup...
     
-    :: Check if dist.zip exists and extract it
     if exist "dist.zip" (
         echo [SETUP] Found dist.zip. Extracting production build...
-        tar -xf dist.zip 2>nul
-        if not exist "dist\index.html" (
-            powershell -NoProfile -Command "Expand-Archive -Path 'dist.zip' -DestinationPath '.' -Force" 2>nul
-        )
+        powershell -NoProfile -Command "Expand-Archive -Path 'dist.zip' -DestinationPath '.' -Force" >nul 2>&1
     )
     
-    :: If still missing, check if npm is available to build from source
     if not exist "dist\index.html" (
         where npm >nul 2>nul
-        if %errorlevel% equ 0 (
+        if !errorlevel! equ 0 (
             echo [SETUP] npm detected. Checking dependencies...
             if not exist "node_modules\" (
-                echo [SETUP] Installing npm dependencies (first-time setup)...
+                echo [SETUP] Installing npm dependencies...
                 call npm install
             )
-            echo [SETUP] Building production bundle (npm run build)...
+            echo [SETUP] Building production bundle...
             call npm run build
         )
     )
 )
 
-:: 2. Verify dist is ready
+REM 2. Verify dist is ready
 if not exist "dist\index.html" (
     echo.
     echo ===================================================
-    echo  [ERROR] Could not find or build the 'dist' folder.
+    echo  [ERROR] Could not find or extract 'dist\index.html'.
     echo ===================================================
-    echo  Please ensure Node.js is installed (https://nodejs.org)
-    echo  and run the following commands in this folder:
-    echo     npm install
-    echo     npm run build
+    echo  Please ensure dist.zip is in the BabySQL folder,
+    echo  or run 'npm install' and 'npm run build'.
     echo ===================================================
     echo.
     pause
     exit /b 1
 )
 
-:: 3. Launch via Node.js if available
+REM 3. Launch via Node.js if available
 where node >nul 2>nul
 if %errorlevel% equ 0 (
+    echo [INFO] Launching with Node.js engine...
     node bin\babysql.js
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Node.js server exited with an error.
+        pause
+    )
     exit /b
 )
 
+REM 4. Launch via Python if available
 where python >nul 2>nul
 if %errorlevel% equ 0 (
-    timeout /t 1 /nobreak >nul
-    start "" http://localhost:3000
+    echo [INFO] Launching with Python engine...
     python serve.py
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Python server exited with an error.
+        pause
+    )
     exit /b
 )
 
 where py >nul 2>nul
 if %errorlevel% equ 0 (
-    timeout /t 1 /nobreak >nul
-    start "" http://localhost:3000
+    echo [INFO] Launching with Python engine...
     py serve.py
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Python server exited with an error.
+        pause
+    )
     exit /b
 )
 
-echo [ERROR] Neither Node.js nor Python was found in your PATH.
-echo Please install Node.js (https://nodejs.org) or Python (https://python.org).
+REM 5. Launch via built-in Windows PowerShell engine (Zero external runtimes required)
+where powershell >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [INFO] Launching with built-in Windows PowerShell engine...
+    powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] PowerShell server exited with an error.
+        pause
+    )
+    exit /b
+)
+
+echo.
+echo ===================================================
+echo  [ERROR] No supported runtime found (Node, Python, or PowerShell).
+echo ===================================================
+echo  Please ensure Node.js, Python, or PowerShell is installed.
+echo ===================================================
+echo.
 pause

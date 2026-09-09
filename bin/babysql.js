@@ -30,12 +30,13 @@ if (isNaN(PORT)) PORT = 3000;
 const noOpen = process.argv.includes('--no-open');
 
 function openBrowser(url) {
-  const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-  exec(`${start} ${url}`, (err) => {
-    if (err) {
-      // ignore
-    }
-  });
+  if (process.platform === 'win32') {
+    exec(`start "" "${url}"`);
+  } else if (process.platform === 'darwin') {
+    exec(`open "${url}"`);
+  } else {
+    exec(`xdg-open "${url}"`);
+  }
 }
 
 function startServer(port) {

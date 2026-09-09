@@ -2,6 +2,7 @@ import http.server
 import socketserver
 import os
 import sys
+import threading
 import webbrowser
 
 PORT = 3000
@@ -30,6 +31,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return "application/wasm"
         if path.endswith(".js") or path.endswith(".mjs"):
             return "application/javascript"
+        if path.endswith(".css"):
+            return "text/css"
+        if path.endswith(".html"):
+            return "text/html"
+        return super().guess_type(path)
+
     def log_message(self, format, *args):
         sys.stdout.write(f"[{self.log_date_time_string()}] {args[0]} {args[1]}\n")
         sys.stdout.flush()
@@ -37,17 +44,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
+def open_browser(url):
+    try:
+        webbrowser.open_new_tab(url)
+    except Exception:
+        pass
+
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     server_address = ("127.0.0.1", port)
-    with ReusableTCPServer(server_address, Handler) as httpd:
-        print(f"BabySQL server running at: http://localhost:{port}", flush=True)
-        print(f"Serving from: {DIRECTORY}", flush=True)
-        print("Press Ctrl+C to stop.", flush=True)
+    url = f"http://localhost:{port}"
+
+    for attempt in range(5):
         try:
-            httpd.serve_forever()
+            with ReusableTCPServer(server_address, Handler) as httpd:
+                print(f"\n=======================================================", flush=True)
+                print(f"  BabySQL Enterprise BRM Studio", flush=True)
+                print(f"  Running locally at: {url}", flush=True)
+                print(f"  Serving from: {DIRECTORY}", flush=True)
+                print(f"  100% Local • Zero Cloud • Instant Stats", flush=True)
+                print(f"=======================================================", flush=True)
+                print("Press Ctrl+C to stop.\n", flush=True)
+
+                # Open browser in a background thread
+                timer = threading.Timer(0.8, open_browser, args=[url])
+                timer.daemon = True
+                timer.start()
+
+                httpd.serve_forever()
+                break
+        except OSError as e:
+            if "Address already in use" in str(e) or getattr(e, 'winerror', 0) == 10048:
+                port += 1
+                server_address = ("127.0.0.1", port)
+                url = f"http://localhost:{port}"
+            else:
+                raise e
         except KeyboardInterrupt:
             print("\nShutting down BabySQL server.", flush=True)
+            break
 
 if __name__ == "__main__":
     main()
