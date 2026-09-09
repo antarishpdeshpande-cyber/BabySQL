@@ -349,7 +349,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden bg-background">
       {/* Left Control Panel: Test Configuration */}
-      <div className="w-full lg:w-88 border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col overflow-y-auto">
+      <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col overflow-y-auto">
         <div className="p-4 border-b border-border bg-surface-raised/40 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -673,7 +673,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
       </div>
 
       {/* Right Results Panel: In-Depth Business Output & Diagnostics */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+      <div className="flex-1 min-w-0 overflow-y-auto p-4 lg:p-6 space-y-6">
         {error && (
           <div className="p-4 rounded-xl bg-danger/10 border border-danger/30 text-rose-300 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
