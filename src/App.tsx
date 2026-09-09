@@ -280,6 +280,7 @@ export const App: React.FC = () => {
             queryChips={dynamicQueryChips}
             isSampleMode={isSampleMode}
             onExitSampleMode={handleToggleSampleMode}
+            activeTableName={activeTableName}
           />
 
           {/* Tab Navigation */}

@@ -10,6 +10,7 @@ import { executeQuery } from '../lib/sqliteEngine';
 import { StatisticalGuideModal } from './StatisticalGuideModal';
 import { SamplingModal } from './SamplingModal';
 import { DistributionGraphs } from './DistributionGraphs';
+import { generateFullHypothesisMarkdown, downloadTextFile } from '../lib/reportGenerator';
 import {
   FlaskConical,
   CheckCircle2,
@@ -31,6 +32,9 @@ import {
   CheckSquare,
   Square,
   Binary,
+  Download,
+  FileText,
+  Search,
 } from 'lucide-react';
 
 interface HypothesisStudioProps {
@@ -176,6 +180,7 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
   const [groupColumn, setGroupColumn] = useState<string>('');
   const [secondaryColumn, setSecondaryColumn] = useState<string>('');
   const [selectedPredictors, setSelectedPredictors] = useState<string[]>([]);
+  const [predictorSearch, setPredictorSearch] = useState<string>('');
   const [benchmarkValue, setBenchmarkValue] = useState<number>(100);
   const [successValue, setSuccessValue] = useState<string>('1');
   const [numClusters, setNumClusters] = useState<number>(3);
@@ -317,6 +322,8 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
     }
   };
 
+  const [copiedFull, setCopiedFull] = useState<boolean>(false);
+
   const handleCopySummary = () => {
     if (!result) return;
     const text = `=== BabySQL Enterprise BRM: ${result.testName} ===
@@ -330,6 +337,27 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyFullReport = () => {
+    if (!result) return;
+    const report = generateFullHypothesisMarkdown(result, targetColumn, targetNumericData);
+    navigator.clipboard.writeText(report);
+    setCopiedFull(true);
+    setTimeout(() => setCopiedFull(false), 2500);
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!result) return;
+    const report = generateFullHypothesisMarkdown(result, targetColumn, targetNumericData);
+    const cleanName = result.testType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    downloadTextFile(`BabySQL_Report_${cleanName}_${Date.now()}.md`, report, 'text/markdown');
+  };
+
+  const handleDownloadJson = () => {
+    if (!result) return;
+    const cleanName = result.testType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    downloadTextFile(`BabySQL_Report_${cleanName}_${Date.now()}.json`, JSON.stringify(result, null, 2), 'application/json');
   };
 
   if (tables.length === 0) {
@@ -404,7 +432,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
 
           {/* Model Category Tabs */}
           <div>
-            <label className="block text-[11px] font-medium text-slate-400 mb-1">Model Category</label>
+            <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-400 mb-1">Model Category</label>
             <div className="flex flex-wrap gap-1">
               {['All', 'Means', 'Categorical', 'Predictive', 'Non-Parametric', 'Clustering'].map((cat) => (
                 <button
@@ -412,8 +440,8 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                   onClick={() => setCategoryFilter(cat)}
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
                     categoryFilter === cat
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                      : 'bg-surface-raised text-muted hover:text-slate-200 border border-transparent'
+                      ? 'bg-cyan-600 text-white dark:bg-cyan-500/20 dark:text-cyan-300 border border-cyan-600 dark:border-cyan-500/40 font-semibold shadow-sm'
+                      : 'bg-surface-raised text-slate-700 dark:text-muted hover:text-slate-950 dark:hover:text-slate-200 border border-border/50'
                   }`}
                 >
                   {cat}
@@ -424,11 +452,11 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
 
           {/* Statistical Test Selector */}
           <div>
-            <label className="block text-[11px] font-medium text-slate-400 mb-1">Statistical Test / Model</label>
+            <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-400 mb-1">Statistical Test / Model</label>
             <select
               value={testType}
               onChange={(e) => setTestType(e.target.value as HypothesisTestType)}
-              className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary font-medium cursor-pointer"
+              className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-primary font-medium cursor-pointer"
             >
               {filteredTests.map((t) => (
                 <option key={t.type} value={t.type}>
@@ -439,10 +467,10 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
           </div>
 
           {/* Short Description Banner */}
-          <div className="p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 text-[11px] text-cyan-200/90 leading-relaxed flex items-start gap-2">
-            <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+          <div className="p-2.5 rounded bg-cyan-500/10 dark:bg-cyan-950/20 border border-cyan-500/30 text-[11px] text-cyan-950 dark:text-cyan-200/90 leading-relaxed flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-cyan-300 mr-1">[{activeTestMeta.badge}]:</span>
+              <span className="font-bold text-cyan-900 dark:text-cyan-300 mr-1">[{activeTestMeta.badge}]:</span>
               {activeTestMeta.shortDesc}
             </div>
           </div>
@@ -553,14 +581,65 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               testType === 'logistic_regression' ||
               testType === 'kmeans_clustering') && (
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  {testType === 'kmeans_clustering'
-                    ? 'Select Numeric Features to Cluster (2+ Required)'
-                    : 'Select Independent Predictors (X₁, X₂, ...)'}
-                </label>
-                <div className="max-h-36 overflow-y-auto p-2 rounded bg-background border border-border space-y-1.5">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-medium text-slate-700 dark:text-slate-400">
+                    {testType === 'kmeans_clustering'
+                      ? 'Select Numeric Features to Cluster (2+ Required)'
+                      : 'Select Independent Predictors (X₁, X₂, ...)'}
+                  </label>
+                  <span className="text-[10px] font-mono text-cyan-800 dark:text-cyan-400 font-semibold">
+                    {selectedPredictors.length} selected
+                  </span>
+                </div>
+
+                {/* Variable Search Bar & Quick Actions */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="relative flex-1">
+                    <Search className="w-3 h-3 absolute left-2 top-2 text-slate-500 dark:text-muted pointer-events-none" />
+                    <input
+                      type="text"
+                      value={predictorSearch}
+                      onChange={(e) => setPredictorSearch(e.target.value)}
+                      placeholder="Filter variables..."
+                      className="w-full pl-6 pr-5 py-1 bg-background border border-border rounded text-[11px] text-slate-900 dark:text-slate-200 placeholder:text-muted focus:outline-none focus:border-primary font-medium"
+                    />
+                    {predictorSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPredictorSearch('')}
+                        className="absolute right-1.5 top-1.5 text-[10px] text-muted hover:text-slate-900 dark:hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const candidates = numericColumns.filter(
+                        (col) => testType === 'kmeans_clustering' || col !== targetColumn
+                      );
+                      setSelectedPredictors(candidates);
+                    }}
+                    className="px-1.5 py-1 rounded bg-surface-raised border border-border text-[10px] text-cyan-800 dark:text-cyan-400 font-semibold hover:bg-border transition-all cursor-pointer"
+                    title="Select all available numerical variables"
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPredictors([])}
+                    className="px-1.5 py-1 rounded bg-surface-raised border border-border text-[10px] text-slate-600 dark:text-muted hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                    title="Clear selection"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <div className="max-h-40 overflow-y-auto p-2 rounded bg-background border border-border space-y-1">
                   {numericColumns
                     .filter((col) => testType === 'kmeans_clustering' || col !== targetColumn)
+                    .filter((col) => !predictorSearch || col.toLowerCase().includes(predictorSearch.toLowerCase()))
                     .map((col) => {
                       const isSelected = selectedPredictors.includes(col);
                       return (
@@ -569,22 +648,26 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                           onClick={() => togglePredictor(col)}
                           className={`flex items-center gap-2 px-2 py-1 rounded text-[11px] cursor-pointer transition-all ${
                             isSelected
-                              ? 'bg-cyan-500/20 text-cyan-200 font-medium'
-                              : 'hover:bg-surface-raised text-slate-400'
+                              ? 'bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-950 dark:text-cyan-200 font-semibold border border-cyan-500/30'
+                              : 'hover:bg-surface-raised text-slate-700 dark:text-slate-400 border border-transparent'
                           }`}
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                            <CheckSquare className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 flex-shrink-0" />
                           ) : (
-                            <Square className="w-3.5 h-3.5 text-muted" />
+                            <Square className="w-3.5 h-3.5 text-slate-400 dark:text-muted flex-shrink-0" />
                           )}
-                          <span>{col}</span>
+                          <span className="truncate">{col}</span>
                         </div>
                       );
                     })}
-                </div>
-                <div className="text-[10px] text-muted mt-1">
-                  {selectedPredictors.length} features selected
+                  {numericColumns
+                    .filter((col) => testType === 'kmeans_clustering' || col !== targetColumn)
+                    .filter((col) => !predictorSearch || col.toLowerCase().includes(predictorSearch.toLowerCase())).length === 0 && (
+                    <div className="text-[11px] text-muted text-center py-2 italic">
+                      No matching variables found.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -700,16 +783,16 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
           <div className="space-y-5 animate-in fade-in duration-200">
             {/* Smart Statistical Assumption Advisory Banner */}
             {result.diagnostics?.recommendation && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-3 shadow-sm">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 text-xs flex items-start gap-3 shadow-sm">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <div className="font-semibold text-amber-300 flex items-center gap-2">
+                  <div className="font-semibold text-amber-900 dark:text-amber-300 flex items-center gap-2">
                     <span>Statistical Diagnostics Advisory</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-200">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-950 dark:text-amber-200 font-semibold">
                       Skew: {result.diagnostics.skewness} • Kurt: {result.diagnostics.kurtosis} • JB p: {result.diagnostics.jarqueBeraPVal}
                     </span>
                   </div>
-                  <p className="text-[11px] text-amber-200/90 leading-relaxed font-normal">
+                  <p className="text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed font-normal">
                     {result.diagnostics.recommendation}
                   </p>
                 </div>
@@ -723,8 +806,8 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       result.executiveSummary.verdict === 'significant'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                     }`}
                   >
                     {result.executiveSummary.verdict === 'significant' ? (
@@ -734,35 +817,61 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                     )}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-100">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                       {result.executiveSummary.headline}
                     </h3>
-                    <p className="text-xs text-muted font-mono mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-muted font-mono mt-0.5">
                       {result.testName} • N = {result.sampleSize} • α = {result.alpha}
                     </p>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleCopySummary}
-                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface border border-border hover:bg-surface-raised text-xs text-slate-300 transition-all cursor-pointer"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied!' : 'Copy Summary'}</span>
-                </button>
+                {/* Executive Report Actions: Copy & Download Full Report */}
+                <div className="self-start sm:self-auto flex items-center flex-wrap gap-2">
+                  <button
+                    onClick={handleCopyFullReport}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-raised hover:bg-border text-xs text-slate-800 dark:text-slate-200 border border-border transition-all cursor-pointer font-medium shadow-sm active:scale-95"
+                    title="Copy full hypothesis testing report with all tables to clipboard as Markdown"
+                  >
+                    {copiedFull ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    )}
+                    <span>{copiedFull ? 'Full Report Copied!' : 'Copy Full Report'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadMarkdown}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary hover:bg-primary-hover text-white dark:text-slate-950 text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
+                    title="Download the full hypothesis report as a Markdown (.md) document"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Report (.md)</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadJson}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-surface border border-border hover:bg-surface-raised text-xs text-slate-600 dark:text-slate-300 transition-all cursor-pointer"
+                    title="Download raw statistical result data as JSON"
+                  >
+                    <FileText className="w-3 h-3 text-slate-500" />
+                    <span>JSON</span>
+                  </button>
+                </div>
               </div>
 
               {/* Plain-English Executive Narrative */}
-              <div className="mt-3.5 p-3.5 rounded-lg bg-background/80 border border-white/5">
-                <div className="text-[11px] font-semibold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                  <TrendingUp className="w-3.5 h-3.5" />
+              <div className="mt-3.5 p-3.5 rounded-lg bg-surface-raised/60 dark:bg-background/80 border border-border">
+                <div className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-400 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                   <span>Executive Business Takeaway</span>
                 </div>
-                <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
                   {result.executiveSummary.takeaway}
                 </p>
                 {result.executiveSummary.effectSizeLabel && (
-                  <div className="mt-2 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded inline-block">
+                  <div className="mt-2 text-[11px] font-mono text-emerald-800 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded inline-block font-semibold">
                     {result.executiveSummary.effectSizeLabel}
                   </div>
                 )}

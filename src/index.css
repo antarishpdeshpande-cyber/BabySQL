@@ -38,6 +38,7 @@ html.dark {
 /* Light mode: Elegant Dark Blue Typography Hierarchy */
 html:not(.dark) {
   color-scheme: light;
+  color: #0b1f3d;
 }
 
 html.dark {
@@ -52,15 +53,8 @@ html.dark body {
   color: #f8fafc;
 }
 
-/* Deep dark blue overrides for light mode */
-html:not(.dark) {
-  color: #0b1f3d;
-}
-
-html:not(.dark) .text-white {
-  color: #07152b !important;
-}
-
+/* Primary text & headings in light mode */
+html:not(.dark) .text-white,
 html:not(.dark) .text-slate-100 {
   color: #07152b !important;
 }
@@ -81,19 +75,45 @@ html:not(.dark) .text-muted {
   color: #325584 !important;
 }
 
-/* Numbers and cyan accents in light mode: deep dark sapphire / cobalt blue */
-html:not(.dark) .text-cyan-300,
-html:not(.dark) .text-cyan-400 {
-  color: #064075 !important;
+/* High-contrast dark blue overrides for cyan text (including opacity variants like text-cyan-200/90) */
+html:not(.dark) [class*="text-cyan-200"],
+html:not(.dark) [class*="text-cyan-300"] {
+  color: #034b8c !important; /* Deep Dark Sapphire Blue */
   font-weight: 600;
 }
 
-html:not(.dark) .text-cyan-200 {
-  color: #092c53 !important;
+html:not(.dark) [class*="text-cyan-400"],
+html:not(.dark) [class*="text-cyan-500"] {
+  color: #035388 !important; /* Rich Dark Royal Blue */
+  font-weight: 600;
 }
 
-html:not(.dark) .text-cyan-500 {
-  color: #034b8c !important;
+/* High-contrast dark amber overrides for warnings and advisory banners */
+html:not(.dark) [class*="text-amber-200"],
+html:not(.dark) [class*="text-amber-300"] {
+  color: #78350f !important; /* Deep Dark Amber / Brown-Orange */
+}
+
+html:not(.dark) [class*="text-amber-400"],
+html:not(.dark) [class*="text-amber-500"] {
+  color: #92400e !important; /* Deep Amber */
+  font-weight: 600;
+}
+
+/* High-contrast dark forest green for success and lift metrics */
+html:not(.dark) [class*="text-emerald-200"],
+html:not(.dark) [class*="text-emerald-300"],
+html:not(.dark) [class*="text-emerald-400"] {
+  color: #065f46 !important; /* Deep Dark Forest Green */
+  font-weight: 600;
+}
+
+/* High-contrast dark crimson for errors and negative lift */
+html:not(.dark) [class*="text-rose-200"],
+html:not(.dark) [class*="text-rose-300"],
+html:not(.dark) [class*="text-rose-400"] {
+  color: #991b1b !important; /* Deep Dark Crimson */
+  font-weight: 600;
 }
 
 /* Inputs, textareas, and code blocks in light mode */

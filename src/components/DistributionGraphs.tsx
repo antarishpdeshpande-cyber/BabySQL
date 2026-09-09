@@ -97,14 +97,14 @@ export const DistributionGraphs: React.FC<DistributionGraphsProps> = ({
       <div className="p-3.5 rounded-xl bg-surface border border-border">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400" />
-            <h5 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400" />
+            <h5 className="text-[11px] font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
               Box &amp; Whisker Plot (Five-Number Summary)
             </h5>
           </div>
-          <div className="text-[10px] font-mono text-muted flex gap-2">
+          <div className="text-[10px] font-mono text-slate-700 dark:text-muted flex gap-2">
             <span>Q1: {stats.q1.toFixed(2)}</span>
-            <span className="text-cyan-400 font-bold">Med: {stats.median.toFixed(2)}</span>
+            <span className="text-sky-900 dark:text-cyan-400 font-bold">Med: {stats.median.toFixed(2)}</span>
             <span>Q3: {stats.q3.toFixed(2)}</span>
             <span>IQR: {stats.iqr.toFixed(2)}</span>
           </div>
@@ -194,12 +194,12 @@ export const DistributionGraphs: React.FC<DistributionGraphsProps> = ({
       <div className="p-3.5 rounded-xl bg-surface border border-border">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <h5 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+            <h5 className="text-[11px] font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
               Kernel Density Estimation (KDE Continuous Curve)
             </h5>
           </div>
-          <div className="text-[10px] font-mono text-muted">
+          <div className="text-[10px] font-mono text-slate-700 dark:text-muted">
             Gaussian Kernel • Mean: {stats.meanVal.toFixed(2)} • Std: {stats.std.toFixed(2)}
           </div>
         </div>

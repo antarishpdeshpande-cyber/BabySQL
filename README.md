@@ -138,11 +138,35 @@ To maintain a featherweight footprint with zero external graphing dependencies, 
 
 ---
 
+## 📑 Executive Report Export & Variable Search
+
+* **Full Executive Report Export & Copy**:
+  * **`Copy Full Report`**: Copies a formatted executive Markdown report directly to your clipboard.
+  * **`Download Report (.md)`**: Exports a complete standalone Markdown document containing the executive verdict, hypotheses ($H_0 / H_a$), assumption diagnostics, full parameter metrics, model tables (ANOVA, VIF, Odds Ratios, Confusion Matrix, Cluster Centroids, A/B Lift), and distribution summaries.
+  * **`Download JSON`**: Exports the raw statistical object with all computed metrics and matrices for programmatic integration.
+* **Variable Searchbar with Quick Actions**:
+  * Real-time column filtering in Hypothesis Studio to effortlessly locate predictors across wide datasets (e.g. 50+ columns).
+  * Quick-action **`All`** and **`Clear`** buttons for multi-predictor regression and cluster analysis.
+
+---
+
+## ⚡ SQL Prompt Templates & Shortcuts
+
+The SQL Editor includes one-click prompt templates that automatically inject tailored queries for the active table:
+* `📊 Group & Count`: Instant frequency distribution grouped by a column.
+* `🔍 Filter WHERE`: Conditional threshold filtering template.
+* `🏆 Top 10`: Order and rank top 10 records.
+* `📐 Aggregates`: Summary metrics (`COUNT`, `AVG`, `MIN`, `MAX`).
+* `✨ Distinct`: Discover unique categorical entities.
+* `🛡️ Null Audit`: Data quality audit counting missing values.
+
+---
+
 ## 🌓 Minimalist Light & Dark Mode
  
 Toggle between dark and light themes with one click in the top navigation bar:
 * **Dark Mode (Default)**: Deep slate palette (`#0a0e17` / `#111827`) optimized for extended analytical sessions.
-* **Minimalist Light Mode**: Clean high-contrast white & slate-50 design featuring **executive dark blue typography** (`#07152b` / `#0b1f3d` / `#064075`) for sharp readability and presentation.
+* **Minimalist Light Mode**: Clean high-contrast white & slate-50 design featuring **executive dark blue typography** (`#07152b` / `#0b1f3d` / `#064075`) and deep amber / forest green alerts for sharp readability and presentation.
 * Preference is automatically persisted in `localStorage`.
 
 ---
@@ -175,9 +199,10 @@ Toggle between dark and light themes with one click in the top navigation bar:
 | Shortcut | Action |
 | :--- | :--- |
 | `Ctrl + Enter` / `Cmd + Enter` | Run active SQL query |
+| `Ctrl + L` | Clear active SQL query |
 | `Click on any cell` | Copies cell value to clipboard with notification |
 | `Click column header` | Toggles ascending / descending sort |
-| `Escape` | Closes any open modal (Guide, Sampling, CSV Uploader) |
+| `Escape` | Closes any open modal (Guide, Sampling, CSV Uploader, Shortcuts drawer) |
 
 ---
 
