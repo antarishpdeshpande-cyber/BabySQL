@@ -47,15 +47,15 @@
 
 ---
 
-## 🚀 Quickstart (Totally Standalone)
+## 🚀 Quickstart (Totally Standalone — Zero Prerequisites)
 
-BabySQL is designed to run **instantly without setup**:
+BabySQL is designed to run **instantly with zero software installation or setup**:
 
-### Option 1: Windows (One-Click Standalone)
+### Option 1: Windows (One-Click Standalone — Zero Installation)
 Double-click **`run.bat`** in the repository root.
 * Automatically verifies the production bundle (`dist/index.html` or self-extracts `dist.zip`).
-* Automatically detects Node.js or Python.
-* Opens [http://localhost:3000](http://localhost:3000) directly in your default browser.
+* **Zero Prerequisites**: Works out-of-the-box on any Windows 10/11 PC. If Node.js or Python is present, it uses them; otherwise, it automatically falls back to Windows's native built-in **PowerShell HTTP engine** (`serve.ps1`).
+* Launches [http://localhost:3000](http://localhost:3000) directly in your default web browser.
 
 ### Option 2: Python (Zero Node.js Required)
 ```bash
@@ -67,7 +67,7 @@ python serve.py
 node bin/babysql.js
 ```
 
-*(For developers modifying code: `npm install` followed by `npm run dev` or `npm run build`.)*
+*(For developers modifying source code: `npm install` followed by `npm run dev` or `npm run build`.)*
 
 ---
 
@@ -139,10 +139,10 @@ To maintain a featherweight footprint with zero external graphing dependencies, 
 ---
 
 ## 🌓 Minimalist Light & Dark Mode
-
+ 
 Toggle between dark and light themes with one click in the top navigation bar:
 * **Dark Mode (Default)**: Deep slate palette (`#0a0e17` / `#111827`) optimized for extended analytical sessions.
-* **Minimalist Light Mode**: Clean, crisp high-contrast design (`#f8fafc` / `#ffffff`) perfect for daylight work, executive reporting, and screen sharing.
+* **Minimalist Light Mode**: Clean high-contrast white & slate-50 design featuring **executive dark blue typography** (`#07152b` / `#0b1f3d` / `#064075`) for sharp readability and presentation.
 * Preference is automatically persisted in `localStorage`.
 
 ---
