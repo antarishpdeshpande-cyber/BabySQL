@@ -50,6 +50,7 @@ function cleanNumericValues(values: any[]): number[] {
       if (typeof v === 'number') return v;
       if (typeof v === 'string') {
         const cleaned = v.replace(/[$,]/g, '').trim();
+        if (cleaned === '') return null;
         const parsed = Number(cleaned);
         return isNaN(parsed) ? null : parsed;
       }
@@ -814,8 +815,8 @@ export function runMannWhitneyUTest(
     else r2 += item.rank;
   }
 
-  const u1 = n1 * n2 + (n1 * (n1 + 1)) / 2 - r1;
-  const u2 = n1 * n2 + (n2 * (n2 + 1)) / 2 - r2;
+  const u1 = r1 - (n1 * (n1 + 1)) / 2;
+  const u2 = r2 - (n2 * (n2 + 1)) / 2;
   const u = Math.min(u1, u2);
 
   // Large-sample normal approximation for U
