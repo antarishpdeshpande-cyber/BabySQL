@@ -55,9 +55,9 @@ export function calculateDescriptiveStats(columnName: string, rawValues: any[]):
     const q3 = Math.round(getPercentile(numbers, 0.75) * 1000) / 1000;
     const iqr = Math.round((q3 - q1) * 1000) / 1000;
 
-    // Variance and StdDev
+    // Variance and StdDev (Sample Variance)
     const varianceSum = numbers.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0);
-    const variance = Math.round((varianceSum / n) * 1000) / 1000;
+    const variance = n > 1 ? Math.round((varianceSum / (n - 1)) * 1000) / 1000 : 0;
     const stdDev = Math.round(Math.sqrt(variance) * 1000) / 1000;
 
     // Build 8-bin histogram
