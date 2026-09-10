@@ -21,6 +21,7 @@ import {
   BarChart2,
   CheckCircle2,
   Table,
+  BookOpen,
 } from 'lucide-react';
 
 interface SamplingModalProps {
@@ -29,6 +30,7 @@ interface SamplingModalProps {
   tables: TableMeta[];
   defaultTable?: string;
   onSampleCreated: (newTableName: string, count: number) => void;
+  onOpenSamplingGuide?: () => void;
 }
 
 export const SamplingModal: React.FC<SamplingModalProps> = ({
@@ -37,6 +39,7 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
   tables,
   defaultTable,
   onSampleCreated,
+  onOpenSamplingGuide,
 }) => {
   const [tabMode, setTabMode] = useState<'resample' | 'simulate'>('resample');
 
@@ -164,12 +167,25 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
               <p className="text-[11px] text-muted">Fisher-Yates shuffle algorithms & jStat distribution generators</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded text-muted hover:text-slate-200 hover:bg-surface-raised transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onOpenSamplingGuide && (
+              <button
+                type="button"
+                onClick={onOpenSamplingGuide}
+                className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all cursor-pointer mr-1 font-medium"
+                title="Open Sampling & Simulation Reference Guide"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Sampling Guide</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1 rounded text-muted hover:text-slate-200 hover:bg-surface-raised transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Mode Switch Tabs */}
@@ -370,9 +386,21 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
 
                     {/* Allocation Mode Selector */}
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1.5">
-                        Stratum Allocation Strategy
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-medium text-slate-300">
+                          Stratum Allocation Strategy
+                        </label>
+                        {onOpenSamplingGuide && (
+                          <button
+                            type="button"
+                            onClick={onOpenSamplingGuide}
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer hover:underline font-mono"
+                          >
+                            <Info className="w-3 h-3" />
+                            <span>Proportional Math Guide</span>
+                          </button>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"

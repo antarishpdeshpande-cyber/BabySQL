@@ -11,6 +11,7 @@ import {
   Check,
   Download,
   FileJson,
+  BookOpen,
 } from 'lucide-react';
 import { calculateDescriptiveStats } from '../lib/statsEngine';
 import { generateDescriptiveStatsMarkdown, downloadTextFile } from '../lib/reportGenerator';
@@ -21,6 +22,7 @@ interface StatsDrawerProps {
   values: any[][];
   initialColumn?: string;
   tableName?: string;
+  onOpenEdaGuide?: () => void;
 }
 
 export const StatsDrawer: React.FC<StatsDrawerProps> = ({
@@ -28,6 +30,7 @@ export const StatsDrawer: React.FC<StatsDrawerProps> = ({
   values,
   initialColumn,
   tableName,
+  onOpenEdaGuide,
 }) => {
   const [selectedCol, setSelectedCol] = useState<string>(initialColumn || columns[0] || '');
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -118,6 +121,17 @@ export const StatsDrawer: React.FC<StatsDrawerProps> = ({
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
+          {onOpenEdaGuide && (
+            <button
+              onClick={onOpenEdaGuide}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 text-xs transition-all cursor-pointer font-medium active:scale-95 shadow-sm"
+              title="Open Descriptive Stats & EDA Reference Guide"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>EDA Guide</span>
+            </button>
+          )}
+
           {/* Column Selector */}
           <div className="flex items-center gap-1.5 bg-background border border-border rounded-lg px-2.5 py-1">
             <span className="text-[11px] text-muted">Column:</span>

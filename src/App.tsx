@@ -39,6 +39,12 @@ export const App: React.FC = () => {
   const [isUploaderOpen, setIsUploaderOpen] = useState<boolean>(false);
   const [isSamplingOpen, setIsSamplingOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [guideInitialTab, setGuideInitialTab] = useState<'matrix' | 'library' | 'sampling' | 'descriptive' | 'audit'>('matrix');
+
+  const handleOpenGuide = (tab: 'matrix' | 'library' | 'sampling' | 'descriptive' | 'audit' = 'matrix') => {
+    setGuideInitialTab(tab);
+    setIsGuideOpen(true);
+  };
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -253,7 +259,7 @@ export const App: React.FC = () => {
         isReady={isReady}
         tableCount={tables.length}
         onOpenSampling={() => setIsSamplingOpen(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenGuide={() => handleOpenGuide('matrix')}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -349,6 +355,7 @@ export const App: React.FC = () => {
                 values={queryResult?.values || []}
                 initialColumn={selectedStatsColumn}
                 tableName={activeTableName}
+                onOpenEdaGuide={() => handleOpenGuide('descriptive')}
               />
             ) : (
               <HypothesisStudio
@@ -383,12 +390,14 @@ export const App: React.FC = () => {
           handleSelectTableQuery(newTableName);
           showToast(`Sample table "${newTableName}" (${count} rows) created!`);
         }}
+        onOpenSamplingGuide={() => handleOpenGuide('sampling')}
       />
 
       {/* Global Statistical Guide Modal */}
       <StatisticalGuideModal
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
+        initialTab={guideInitialTab}
         onSelectTest={() => {
           setActiveTab('hypothesis');
         }}

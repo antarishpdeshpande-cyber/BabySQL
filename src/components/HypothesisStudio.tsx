@@ -1628,6 +1628,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
       <StatisticalGuideModal
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
+        initialTab="library"
         onSelectTest={(id) => setTestType(id as HypothesisTestType)}
       />
 
@@ -1640,6 +1641,10 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
         onSampleCreated={(newTableName, count) => {
           setSelectedTable(newTableName);
           if (onSampleCreated) onSampleCreated(newTableName, count);
+        }}
+        onOpenSamplingGuide={() => {
+          setIsSamplingOpen(false);
+          setIsGuideOpen(true);
         }}
       />
     </div>
