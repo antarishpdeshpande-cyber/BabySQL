@@ -15,6 +15,14 @@ import {
   CronbachAlphaData,
   CronbachItemStats,
   RegressionDiagnostics,
+  TwoWayAnovaData,
+  FTestVarianceData,
+  ChiSquareGofData,
+  McNemarData,
+  ExactBinomialData,
+  PoissonTestData,
+  PcaData,
+  DixonQData,
 } from '../types/hypothesis';
 
 const jStat = (pkg as any).jStat || pkg;
@@ -2494,6 +2502,165 @@ export function executeHypothesisTest(
       break;
     }
 
+    case 'two_way_anova': {
+      if (!groupColumn) throw new Error('Factor A column is required for Two-Way ANOVA.');
+      if (!secondaryColumn) throw new Error('Factor B column is required for Two-Way ANOVA.');
+      const groupAIdx = columns.indexOf(groupColumn);
+      const groupBIdx = columns.indexOf(secondaryColumn);
+      if (groupAIdx === -1) throw new Error(`Factor A column "${groupColumn}" not found.`);
+      if (groupBIdx === -1) throw new Error(`Factor B column "${secondaryColumn}" not found.`);
+
+      const cellMap = new Map<string, Map<string, number[]>>();
+      for (const row of rows) {
+        const rawA = String(row[groupAIdx] ?? 'Unknown');
+        const rawB = String(row[groupBIdx] ?? 'Unknown');
+        const num = cleanNumericValues([row[targetIdx]]);
+        if (num.length > 0) {
+          if (!cellMap.has(rawA)) cellMap.set(rawA, new Map<string, number[]>());
+          const bMap = cellMap.get(rawA)!;
+          if (!bMap.has(rawB)) bMap.set(rawB, []);
+          bMap.get(rawB)!.push(num[0]);
+        }
+      }
+
+      result = runTwoWayAnova(cellMap, targetColumn, groupColumn, secondaryColumn, tableName, alpha);
+      break;
+    }
+
+    case 'f_test_variance': {
+      if (!groupColumn) throw new Error('A grouping column is required to partition into two cohorts.');
+      const groupIdx = columns.indexOf(groupColumn);
+      if (groupIdx === -1) throw new Error(`Grouping column "${groupColumn}" not found.`);
+
+      const groupsMap = new Map<string, number[]>();
+      for (const row of rows) {
+        const rawGroup = String(row[groupIdx] ?? 'Unknown');
+        const num = cleanNumericValues([row[targetIdx]]);
+        if (num.length > 0) {
+          if (!groupsMap.has(rawGroup)) groupsMap.set(rawGroup, []);
+          groupsMap.get(rawGroup)!.push(num[0]);
+        }
+      }
+
+      const keys = Array.from(groupsMap.keys());
+      if (keys.length < 2) {
+        throw new Error(`Grouping column "${groupColumn}" must contain at least 2 cohorts (found: ${keys.join(', ')}).`);
+      }
+
+      const g1 = keys[0];
+      const g2 = keys[1];
+      result = runFTestVariance(groupsMap.get(g1)!, groupsMap.get(g2)!, g1, g2, targetColumn, tableName, alpha);
+      break;
+    }
+
+    case 'chi_square_gof': {
+      result = runChiSquareGof(targetRaw, targetColumn, tableName, alpha);
+      break;
+    }
+
+    case 'mcnemar_test': {
+      if (!secondaryColumn) throw new Error('A second paired binary column (Time 2 / After) is required.');
+      const secIdx = columns.indexOf(secondaryColumn);
+      if (secIdx === -1) throw new Error(`After column "${secondaryColumn}" not found.`);
+
+      const beforeVals = rows.map((r) => r[targetIdx]);
+      const afterVals = rows.map((r) => r[secIdx]);
+      result = runMcNemarTest(beforeVals, afterVals, targetColumn, secondaryColumn, tableName, alpha, successValue);
+      break;
+    }
+
+    case 'binomial_test': {
+      const p0 = benchmarkValue !== undefined && benchmarkValue > 0 && benchmarkValue < 1 ? benchmarkValue : 0.5;
+      result = runExactBinomialTest(targetRaw, targetColumn, tableName, alpha, p0, successValue);
+      break;
+    }
+
+    case 'poisson_test': {
+      if (!groupColumn) throw new Error('A grouping column is required to partition into two cohorts.');
+      const groupIdx = columns.indexOf(groupColumn);
+      if (groupIdx === -1) throw new Error(`Grouping column "${groupColumn}" not found.`);
+
+      const secIdx = secondaryColumn ? columns.indexOf(secondaryColumn) : -1;
+
+      const cohortEvents = new Map<string, number[]>();
+      const cohortExposures = new Map<string, number[]>();
+
+      for (const row of rows) {
+        const rawGroup = String(row[groupIdx] ?? 'Unknown');
+        const numEv = cleanNumericValues([row[targetIdx]]);
+        if (numEv.length > 0) {
+          if (!cohortEvents.has(rawGroup)) {
+            cohortEvents.set(rawGroup, []);
+            cohortExposures.set(rawGroup, []);
+          }
+          cohortEvents.get(rawGroup)!.push(numEv[0]);
+
+          const expVal = secIdx !== -1 ? cleanNumericValues([row[secIdx]]) : [1];
+          cohortExposures.get(rawGroup)!.push(expVal.length > 0 ? expVal[0] : 1);
+        }
+      }
+
+      const keys = Array.from(cohortEvents.keys());
+      if (keys.length < 2) {
+        throw new Error(`Grouping column "${groupColumn}" must contain at least 2 cohorts (found: ${keys.join(', ')}).`);
+      }
+
+      const g1 = keys[0];
+      const g2 = keys[1];
+      result = runPoissonRateTest(
+        cohortEvents.get(g1)!,
+        cohortExposures.get(g1)!,
+        cohortEvents.get(g2)!,
+        cohortExposures.get(g2)!,
+        g1,
+        g2,
+        targetColumn,
+        tableName,
+        alpha
+      );
+      break;
+    }
+
+    case 'pca': {
+      const feats = predictorColumns && predictorColumns.length > 0
+        ? predictorColumns
+        : secondaryColumn ? [targetColumn, secondaryColumn] : [targetColumn];
+      if (feats.length < 2) {
+        throw new Error('Principal Component Analysis requires at least 2 numeric feature columns.');
+      }
+
+      const featIndices = feats.map((f) => {
+        const idx = columns.indexOf(f);
+        if (idx === -1) throw new Error(`Feature column "${f}" not found.`);
+        return idx;
+      });
+
+      const matrix: number[][] = [];
+      for (const row of rows) {
+        let valid = true;
+        const rowVals: number[] = [];
+        for (const idx of featIndices) {
+          const num = cleanNumericValues([row[idx]]);
+          if (num.length === 0) {
+            valid = false;
+            break;
+          }
+          rowVals.push(num[0]);
+        }
+        if (valid) {
+          matrix.push(rowVals);
+        }
+      }
+
+      result = runPCA(matrix, feats, tableName);
+      break;
+    }
+
+    case 'dixon_q_test': {
+      result = runDixonQTest(targetNumeric, targetColumn, tableName, alpha);
+      break;
+    }
+
     default:
       throw new Error(`Unsupported test type "${testType}".`);
   }
@@ -2714,5 +2881,949 @@ export function runKMeansClustering(
       { name: 'Features Clustered', value: m, description: 'Number of dimensions analyzed' },
       { name: 'Convergence Iterations', value: iterations, description: 'Number of Lloyd optimization steps' },
     ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 1. Two-Way Factorial ANOVA (Factor A × Factor B with Interaction Effect)
+// ---------------------------------------------------------------------------
+function runTwoWayAnova(
+  cellMap: Map<string, Map<string, number[]>>,
+  targetColumn: string,
+  factorAColumn: string,
+  factorBColumn: string,
+  tableName: string,
+  alpha: number
+): HypothesisTestResult {
+  const levelsA = Array.from(cellMap.keys());
+  const a = levelsA.length;
+  if (a < 2) {
+    throw new Error(`Factor A ("${factorAColumn}") must contain at least 2 distinct levels.`);
+  }
+
+  const levelsBSet = new Set<string>();
+  for (const bMap of cellMap.values()) {
+    for (const bKey of bMap.keys()) {
+      levelsBSet.add(bKey);
+    }
+  }
+  const levelsB = Array.from(levelsBSet);
+  const b = levelsB.length;
+  if (b < 2) {
+    throw new Error(`Factor B ("${factorBColumn}") must contain at least 2 distinct levels.`);
+  }
+
+  let totalN = 0;
+  let totalSum = 0;
+  const cellMeansList: { factorA: string; factorB: string; count: number; mean: number; stdDev: number }[] = [];
+
+  for (const lvlA of levelsA) {
+    const bMap = cellMap.get(lvlA)!;
+    for (const lvlB of levelsB) {
+      const vals = bMap.get(lvlB) || [];
+      const nCell = vals.length;
+      totalN += nCell;
+      const sumCell = vals.reduce((acc, v) => acc + v, 0);
+      totalSum += sumCell;
+      const meanCell = nCell > 0 ? sumCell / nCell : 0;
+      const sdCell = nCell > 1 ? Math.sqrt(vals.reduce((acc, v) => acc + Math.pow(v - meanCell, 2), 0) / (nCell - 1)) : 0;
+      cellMeansList.push({
+        factorA: lvlA,
+        factorB: lvlB,
+        count: nCell,
+        mean: Number(meanCell.toFixed(3)),
+        stdDev: Number(sdCell.toFixed(3)),
+      });
+    }
+  }
+
+  if (totalN < a * b + 2) {
+    throw new Error(`Insufficient observations (N=${totalN}) for a ${a}x${b} Factorial ANOVA. Need at least ${a * b + 2} observations.`);
+  }
+
+  const grandMean = totalSum / totalN;
+
+  // Total SS
+  let ssTotal = 0;
+  for (const bMap of cellMap.values()) {
+    for (const vals of bMap.values()) {
+      for (const v of vals) {
+        ssTotal += Math.pow(v - grandMean, 2);
+      }
+    }
+  }
+
+  // Marginal A
+  const meanA: Record<string, number> = {};
+  const countA: Record<string, number> = {};
+  for (const lvlA of levelsA) {
+    const bMap = cellMap.get(lvlA)!;
+    let nA = 0;
+    let sumA = 0;
+    for (const vals of bMap.values()) {
+      nA += vals.length;
+      sumA += vals.reduce((acc, v) => acc + v, 0);
+    }
+    countA[lvlA] = nA;
+    meanA[lvlA] = nA > 0 ? sumA / nA : 0;
+  }
+
+  let ssA = 0;
+  for (const lvlA of levelsA) {
+    ssA += countA[lvlA] * Math.pow(meanA[lvlA] - grandMean, 2);
+  }
+  const dfA = a - 1;
+  const msA = dfA > 0 ? ssA / dfA : 0;
+
+  // Marginal B
+  const meanB: Record<string, number> = {};
+  const countB: Record<string, number> = {};
+  for (const lvlB of levelsB) {
+    let nB = 0;
+    let sumB = 0;
+    for (const bMap of cellMap.values()) {
+      const vals = bMap.get(lvlB) || [];
+      nB += vals.length;
+      sumB += vals.reduce((acc, v) => acc + v, 0);
+    }
+    countB[lvlB] = nB;
+    meanB[lvlB] = nB > 0 ? sumB / nB : 0;
+  }
+
+  let ssB = 0;
+  for (const lvlB of levelsB) {
+    ssB += countB[lvlB] * Math.pow(meanB[lvlB] - grandMean, 2);
+  }
+  const dfB = b - 1;
+  const msB = dfB > 0 ? ssB / dfB : 0;
+
+  // Within error & Interaction SS
+  let ssError = 0;
+  let ssAB = 0;
+  let activeCells = 0;
+  for (const lvlA of levelsA) {
+    const bMap = cellMap.get(lvlA)!;
+    for (const lvlB of levelsB) {
+      const vals = bMap.get(lvlB) || [];
+      if (vals.length > 0) {
+        activeCells++;
+        const cellMean = vals.reduce((acc, v) => acc + v, 0) / vals.length;
+        for (const v of vals) {
+          ssError += Math.pow(v - cellMean, 2);
+        }
+        ssAB += vals.length * Math.pow(cellMean - meanA[lvlA] - meanB[lvlB] + grandMean, 2);
+      }
+    }
+  }
+
+  const dfAB = dfA * dfB;
+  const dfError = Math.max(1, totalN - activeCells);
+  const msAB = dfAB > 0 ? ssAB / dfAB : 0;
+  const msError = dfError > 0 ? ssError / dfError : 1;
+
+  const fA = msError > 0 ? msA / msError : 0;
+  const pA = dfA > 0 && dfError > 0 ? Math.max(0, Math.min(1, 1 - jStat.centralF.cdf(fA, dfA, dfError))) : 1;
+  const partialEtaA = ssA + ssError > 0 ? ssA / (ssA + ssError) : 0;
+
+  const fB = msError > 0 ? msB / msError : 0;
+  const pB = dfB > 0 && dfError > 0 ? Math.max(0, Math.min(1, 1 - jStat.centralF.cdf(fB, dfB, dfError))) : 1;
+  const partialEtaB = ssB + ssError > 0 ? ssB / (ssB + ssError) : 0;
+
+  const fAB = msError > 0 ? msAB / msError : 0;
+  const pAB = dfAB > 0 && dfError > 0 ? Math.max(0, Math.min(1, 1 - jStat.centralF.cdf(fAB, dfAB, dfError))) : 1;
+  const partialEtaAB = ssAB + ssError > 0 ? ssAB / (ssAB + ssError) : 0;
+
+  const isSigA = pA < alpha;
+  const isSigB = pB < alpha;
+  const isSigAB = pAB < alpha;
+  const overallVerdict = isSigA || isSigB || isSigAB ? 'significant' : 'not_significant';
+
+  let takeaway = '';
+  if (isSigAB) {
+    takeaway = `Significant interaction detected (F=${fAB.toFixed(2)}, p=${pAB.toFixed(4)}, ηₚ²=${partialEtaAB.toFixed(3)}). The effect of ${factorAColumn} on ${targetColumn} depends significantly on the level of ${factorBColumn}.`;
+  } else {
+    const sigParts: string[] = [];
+    if (isSigA) sigParts.push(`${factorAColumn} (F=${fA.toFixed(2)}, p=${pA.toFixed(4)})`);
+    if (isSigB) sigParts.push(`${factorBColumn} (F=${fB.toFixed(2)}, p=${pB.toFixed(4)})`);
+    takeaway = sigParts.length > 0
+      ? `Main effect of ${sigParts.join(' and ')} is statistically significant. No significant interaction effect found (p=${pAB.toFixed(4)}).`
+      : `No significant main effects or interaction found between ${factorAColumn} and ${factorBColumn} on ${targetColumn}.`;
+  }
+
+  return {
+    testType: 'two_way_anova',
+    testName: `Two-Way Factorial ANOVA (${factorAColumn} × ${factorBColumn})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: totalN,
+    alpha,
+    statisticName: 'Interaction F-Stat',
+    testStatistic: Number(fAB.toFixed(3)),
+    pVal: Number(pAB.toFixed(4)),
+    degreesOfFreedom: `${dfAB}, ${dfError}`,
+    executiveSummary: {
+      verdict: overallVerdict,
+      headline: `Two-Way ANOVA: ${factorAColumn} (${a} levels) × ${factorBColumn} (${b} levels)`,
+      h0: 'H₀: No main effects and no interaction between Factor A and Factor B',
+      ha: 'Hₐ: At least one factor or interaction significantly affects the target metric',
+      takeaway,
+      effectSizeLabel: `Interaction ηₚ² = ${partialEtaAB.toFixed(3)}`,
+    },
+    metrics: [
+      { name: `F-Stat: ${factorAColumn}`, value: Number(fA.toFixed(2)), description: `Main effect test statistic for ${factorAColumn}` },
+      { name: `p-Value: ${factorAColumn}`, value: Number(pA.toFixed(4)), description: isSigA ? 'Statistically significant main effect' : 'Not statistically significant' },
+      { name: `ηₚ²: ${factorAColumn}`, value: Number(partialEtaA.toFixed(3)), description: 'Partial variance explained by Factor A' },
+      { name: `F-Stat: ${factorBColumn}`, value: Number(fB.toFixed(2)), description: `Main effect test statistic for ${factorBColumn}` },
+      { name: `p-Value: ${factorBColumn}`, value: Number(pB.toFixed(4)), description: isSigB ? 'Statistically significant main effect' : 'Not statistically significant' },
+      { name: `ηₚ²: ${factorBColumn}`, value: Number(partialEtaB.toFixed(3)), description: 'Partial variance explained by Factor B' },
+      { name: 'Interaction F (A×B)', value: Number(fAB.toFixed(2)), description: 'Interaction test statistic' },
+      { name: 'Interaction p-Value', value: Number(pAB.toFixed(4)), description: isSigAB ? 'Statistically significant interaction' : 'No interaction effect' },
+      { name: 'Interaction ηₚ²', value: Number(partialEtaAB.toFixed(3)), description: 'Partial variance explained by interaction' },
+    ],
+    twoWayAnova: {
+      factorAName: factorAColumn,
+      factorBName: factorBColumn,
+      factorAEffects: { source: factorAColumn, ss: Number(ssA.toFixed(2)), df: dfA, ms: Number(msA.toFixed(2)), fStat: Number(fA.toFixed(2)), pVal: Number(pA.toFixed(4)), partialEtaSq: Number(partialEtaA.toFixed(3)), isSignificant: isSigA },
+      factorBEffects: { source: factorBColumn, ss: Number(ssB.toFixed(2)), df: dfB, ms: Number(msB.toFixed(2)), fStat: Number(fB.toFixed(2)), pVal: Number(pB.toFixed(4)), partialEtaSq: Number(partialEtaB.toFixed(3)), isSignificant: isSigB },
+      interactionEffects: { source: `${factorAColumn} × ${factorBColumn}`, ss: Number(ssAB.toFixed(2)), df: dfAB, ms: Number(msAB.toFixed(2)), fStat: Number(fAB.toFixed(2)), pVal: Number(pAB.toFixed(4)), partialEtaSq: Number(partialEtaAB.toFixed(3)), isSignificant: isSigAB },
+      errorEffects: { ss: Number(ssError.toFixed(2)), df: dfError, ms: Number(msError.toFixed(2)) },
+      totalEffects: { ss: Number(ssTotal.toFixed(2)), df: totalN - 1 },
+      cellMeans: cellMeansList,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 2. Two-Sample F-Test for Equality of Variances
+// ---------------------------------------------------------------------------
+function runFTestVariance(
+  v1: number[],
+  v2: number[],
+  g1Name: string,
+  g2Name: string,
+  targetColumn: string,
+  tableName: string,
+  alpha: number
+): HypothesisTestResult {
+  const n1 = v1.length;
+  const n2 = v2.length;
+  if (n1 < 2 || n2 < 2) {
+    throw new Error('Both cohorts must contain at least 2 numeric values to test variances.');
+  }
+
+  const var1 = jStat.variance(v1, true);
+  const var2 = jStat.variance(v2, true);
+  const sd1 = Math.sqrt(var1);
+  const sd2 = Math.sqrt(var2);
+
+  if (var1 === 0 && var2 === 0) {
+    throw new Error('Both cohorts have 0 variance (constant values). Cannot perform F-test.');
+  }
+
+  const fRatio = var2 > 0 ? var1 / var2 : 1;
+  const df1 = n1 - 1;
+  const df2 = n2 - 1;
+
+  const cdfVal = jStat.centralF.cdf(fRatio, df1, df2);
+  const pVal = Math.min(1, 2 * Math.min(cdfVal, 1 - cdfVal));
+
+  const fCritLower = jStat.centralF.inv(1 - alpha / 2, df1, df2);
+  const fCritUpper = jStat.centralF.inv(alpha / 2, df1, df2);
+  const ciLower = fCritLower > 0 ? fRatio / fCritLower : 0;
+  const ciUpper = fCritUpper > 0 ? fRatio / fCritUpper : 0;
+
+  const isSig = pVal < alpha;
+  const verdict = isSig ? 'significant' : 'not_significant';
+  const takeaway = isSig
+    ? `Reject H₀ (F=${fRatio.toFixed(2)}, p=${pVal.toFixed(4)}). The two cohorts have statistically significantly different variances (${sd1.toFixed(2)} vs ${sd2.toFixed(2)}). Use Welch's t-test instead of Student's t-test.`
+    : `Fail to reject H₀ (F=${fRatio.toFixed(2)}, p=${pVal.toFixed(4)}). Variances are not significantly different (${sd1.toFixed(2)} vs ${sd2.toFixed(2)}). Homoscedasticity assumption holds.`;
+
+  return {
+    testType: 'f_test_variance',
+    testName: `Two-Sample F-Test for Equality of Variances (${g1Name} vs ${g2Name})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: n1 + n2,
+    alpha,
+    statisticName: 'F-Statistic (s₁²/s₂²)',
+    testStatistic: Number(fRatio.toFixed(3)),
+    pVal: Number(pVal.toFixed(4)),
+    degreesOfFreedom: `${df1}, ${df2}`,
+    executiveSummary: {
+      verdict,
+      headline: `Variance Ratio = ${fRatio.toFixed(2)} (95% CI: [${ciLower.toFixed(2)}, ${ciUpper.toFixed(2)}])`,
+      h0: 'H₀: The two populations have equal variances (σ₁² = σ₂²)',
+      ha: 'Hₐ: The two populations have unequal variances (σ₁² ≠ σ₂²)',
+      takeaway,
+      effectSizeLabel: `Variance Ratio = ${fRatio.toFixed(2)}`,
+    },
+    metrics: [
+      { name: 'Variance Ratio (F)', value: Number(fRatio.toFixed(3)), description: 'Ratio of sample variance s₁² to s₂²' },
+      { name: 'p-Value', value: Number(pVal.toFixed(4)), description: isSig ? 'Significant variance difference' : 'Equal variances plausible' },
+      { name: `${g1Name} Std Dev`, value: Number(sd1.toFixed(2)), description: `Sample standard deviation (n=${n1})` },
+      { name: `${g2Name} Std Dev`, value: Number(sd2.toFixed(2)), description: `Sample standard deviation (n=${n2})` },
+      { name: '95% CI Ratio Lower', value: Number(ciLower.toFixed(3)), description: 'Lower boundary of true variance ratio' },
+      { name: '95% CI Ratio Upper', value: Number(ciUpper.toFixed(3)), description: 'Upper boundary of true variance ratio' },
+    ],
+    fTestVariance: {
+      group1Name: g1Name,
+      group2Name: g2Name,
+      n1,
+      n2,
+      var1: Number(var1.toFixed(3)),
+      var2: Number(var2.toFixed(3)),
+      sd1: Number(sd1.toFixed(3)),
+      sd2: Number(sd2.toFixed(3)),
+      fRatio: Number(fRatio.toFixed(3)),
+      df1,
+      df2,
+      pValue: Number(pVal.toFixed(4)),
+      ciLower: Number(ciLower.toFixed(3)),
+      ciUpper: Number(ciUpper.toFixed(3)),
+      isEqualVariance: !isSig,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 3. Chi-Square Goodness-of-Fit Test
+// ---------------------------------------------------------------------------
+function runChiSquareGof(
+  rawVals: any[],
+  targetColumn: string,
+  tableName: string,
+  alpha: number
+): HypothesisTestResult {
+  const countsMap = new Map<string, number>();
+  for (const v of rawVals) {
+    if (v === null || v === undefined || v === '') continue;
+    const cat = String(v);
+    countsMap.set(cat, (countsMap.get(cat) || 0) + 1);
+  }
+
+  const categories = Array.from(countsMap.keys());
+  const k = categories.length;
+  if (k < 2) {
+    throw new Error(`Chi-Square Goodness-of-Fit requires at least 2 categories (found: ${categories.join(', ')}).`);
+  }
+
+  const totalN = categories.reduce((sum, c) => sum + countsMap.get(c)!, 0);
+  const expectedPerCat = totalN / k;
+
+  let chi2 = 0;
+  const catDetails: { category: string; observed: number; expected: number; residual: number; stdResidual: number }[] = [];
+
+  for (const cat of categories) {
+    const obs = countsMap.get(cat)!;
+    const exp = expectedPerCat;
+    const diff = obs - exp;
+    chi2 += Math.pow(diff, 2) / exp;
+    const stdRes = exp > 0 ? diff / Math.sqrt(exp) : 0;
+    catDetails.push({
+      category: cat,
+      observed: obs,
+      expected: Number(exp.toFixed(1)),
+      residual: Number(diff.toFixed(1)),
+      stdResidual: Number(stdRes.toFixed(2)),
+    });
+  }
+
+  const df = k - 1;
+  const pVal = Math.max(0, Math.min(1, 1 - jStat.chisquare.cdf(chi2, df)));
+  const isSig = pVal < alpha;
+  const verdict = isSig ? 'significant' : 'not_significant';
+  const takeaway = isSig
+    ? `Reject H₀ (χ²=${chi2.toFixed(2)}, df=${df}, p=${pVal.toFixed(4)}). Observed distribution across ${k} categories differs significantly from expected equal distribution.`
+    : `Fail to reject H₀ (χ²=${chi2.toFixed(2)}, df=${df}, p=${pVal.toFixed(4)}). Observed counts fit expected uniform distribution without significant distortion.`;
+
+  return {
+    testType: 'chi_square_gof',
+    testName: `Chi-Square Goodness-of-Fit (${targetColumn})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: totalN,
+    alpha,
+    statisticName: 'Chi-Square (χ²)',
+    testStatistic: Number(chi2.toFixed(2)),
+    pVal: Number(pVal.toFixed(4)),
+    degreesOfFreedom: df,
+    executiveSummary: {
+      verdict,
+      headline: `Goodness-of-Fit: χ² = ${chi2.toFixed(2)}, df = ${df}, p = ${pVal.toFixed(4)}`,
+      h0: 'H₀: Data follows the hypothesized uniform category distribution',
+      ha: 'Hₐ: Data deviates significantly from the hypothesized category distribution',
+      takeaway,
+    },
+    metrics: [
+      { name: 'Chi-Square (χ²)', value: Number(chi2.toFixed(2)), description: 'Goodness-of-fit test statistic' },
+      { name: 'Degrees of Freedom', value: df, description: 'k - 1 distinct categories' },
+      { name: 'p-Value', value: Number(pVal.toFixed(4)), description: isSig ? 'Statistically significant divergence' : 'Consistent with expected model' },
+      { name: 'Categories (k)', value: k, description: 'Number of distinct levels tested' },
+      { name: 'Total Sample Size', value: totalN, description: 'Sum of all category counts' },
+    ],
+    chiSquareGof: {
+      categories: catDetails,
+      chiSquare: Number(chi2.toFixed(2)),
+      df,
+      pValue: Number(pVal.toFixed(4)),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 4. McNemar's Test for Paired Binary Data
+// ---------------------------------------------------------------------------
+function runMcNemarTest(
+  beforeVals: any[],
+  afterVals: any[],
+  beforeCol: string,
+  afterCol: string,
+  tableName: string,
+  alpha: number,
+  successVal?: string | number
+): HypothesisTestResult {
+  const isPositive = (v: any) => {
+    if (successVal !== undefined && successVal !== '') {
+      return String(v).toLowerCase() === String(successVal).toLowerCase();
+    }
+    const s = String(v).toLowerCase().trim();
+    return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'converted' || s === 'success';
+  };
+
+  let a = 0; // 1 -> 1
+  let b = 0; // 1 -> 0 (discordant)
+  let c = 0; // 0 -> 1 (discordant)
+  let d = 0; // 0 -> 0
+
+  const n = Math.min(beforeVals.length, afterVals.length);
+  for (let i = 0; i < n; i++) {
+    const bv = beforeVals[i];
+    const av = afterVals[i];
+    if (bv === null || bv === undefined || av === null || av === undefined) continue;
+
+    const bPos = isPositive(bv);
+    const aPos = isPositive(av);
+
+    if (bPos && aPos) a++;
+    else if (bPos && !aPos) b++;
+    else if (!bPos && aPos) c++;
+    else d++;
+  }
+
+  const discordant = b + c;
+  let chi2 = 0;
+  let pVal = 1;
+
+  if (discordant > 0) {
+    chi2 = Math.pow(Math.max(0, Math.abs(b - c) - 1), 2) / discordant;
+    pVal = Math.max(0, Math.min(1, 1 - jStat.chisquare.cdf(chi2, 1)));
+  }
+
+  const oddsRatio = c > 0 ? Number((b / c).toFixed(2)) : b > 0 ? Infinity : 1;
+  const isSig = pVal < alpha;
+  const verdict = isSig ? 'significant' : 'not_significant';
+  const takeaway = isSig
+    ? `Reject H₀ (χ²=${chi2.toFixed(2)}, p=${pVal.toFixed(4)}). Statistically significant shift between ${beforeCol} and ${afterCol}. Discordant transitions: ${c} subjects improved vs ${b} subjects declined.`
+    : `Fail to reject H₀ (χ²=${chi2.toFixed(2)}, p=${pVal.toFixed(4)}). No statistically significant difference in paired conversion probabilities before vs after intervention.`;
+
+  return {
+    testType: 'mcnemar_test',
+    testName: `McNemar's Paired Test (${beforeCol} vs ${afterCol})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: a + b + c + d,
+    alpha,
+    statisticName: 'McNemar χ² (Continuity Corrected)',
+    testStatistic: Number(chi2.toFixed(2)),
+    pVal: Number(pVal.toFixed(4)),
+    degreesOfFreedom: 1,
+    executiveSummary: {
+      verdict,
+      headline: `Paired Discordant Shifts: +${c} conversions vs -${b} drops (p = ${pVal.toFixed(4)})`,
+      h0: 'H₀: Marginal probabilities before and after intervention are identical (b = c)',
+      ha: 'Hₐ: Significant shift in positive response rate after intervention',
+      takeaway,
+      effectSizeLabel: `Discordant Odds Ratio = ${oddsRatio}`,
+    },
+    metrics: [
+      { name: 'McNemar χ²', value: Number(chi2.toFixed(2)), description: 'Edwards continuity-corrected paired chi-square' },
+      { name: 'p-Value', value: Number(pVal.toFixed(4)), description: isSig ? 'Statistically significant change' : 'Not statistically significant' },
+      { name: 'Discordant Pairs', value: discordant, description: 'Subjects who changed status (b + c)' },
+      { name: 'Gained Positive (0→1)', value: c, description: 'Subjects switching to positive' },
+      { name: 'Lost Positive (1→0)', value: b, description: 'Subjects switching to negative' },
+      { name: 'Discordant Odds Ratio', value: oddsRatio, description: 'Ratio of downward to upward switches (b / c)' },
+    ],
+    mcnemar: {
+      beforeName: beforeCol,
+      afterName: afterCol,
+      a,
+      b,
+      c,
+      d,
+      bothPositive: a,
+      beforePosAfterNeg: b,
+      beforeNegAfterPos: c,
+      bothNegative: d,
+      discordantPairs: discordant,
+      chiSquare: Number(chi2.toFixed(2)),
+      pValue: Number(pVal.toFixed(4)),
+      oddsRatio,
+      isEdwardsCorrected: true,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 5. Exact Binomial Test (Small-Sample Exact Test)
+// ---------------------------------------------------------------------------
+function runExactBinomialTest(
+  rawVals: any[],
+  targetColumn: string,
+  tableName: string,
+  alpha: number,
+  p0: number = 0.5,
+  successVal?: string | number
+): HypothesisTestResult {
+  const isPositive = (v: any) => {
+    if (successVal !== undefined && successVal !== '') {
+      return String(v).toLowerCase() === String(successVal).toLowerCase();
+    }
+    const s = String(v).toLowerCase().trim();
+    return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'success' || s === 'pass';
+  };
+
+  let successes = 0;
+  let trials = 0;
+  for (const v of rawVals) {
+    if (v === null || v === undefined || v === '') continue;
+    trials++;
+    if (isPositive(v)) successes++;
+  }
+
+  if (trials === 0) {
+    throw new Error('No valid trials found for Exact Binomial Test.');
+  }
+
+  const obsRate = successes / trials;
+  const pK = jStat.binomial.pdf(successes, trials, p0);
+
+  let pVal = 0;
+  for (let x = 0; x <= trials; x++) {
+    const pX = jStat.binomial.pdf(x, trials, p0);
+    if (pX <= pK + 1e-12) {
+      pVal += pX;
+    }
+  }
+  pVal = Math.min(1, Math.max(0, pVal));
+
+  // Clopper-Pearson Exact 95% Confidence Interval
+  const ciLower = successes === 0 ? 0 : jStat.beta.inv(alpha / 2, successes, trials - successes + 1);
+  const ciUpper = successes === trials ? 1 : jStat.beta.inv(1 - alpha / 2, successes + 1, trials - successes);
+
+  const isSig = pVal < alpha;
+  const verdict = isSig ? 'significant' : 'not_significant';
+  const takeaway = isSig
+    ? `Reject H₀ (p=${pVal.toFixed(4)}). Observed success rate of ${(obsRate * 100).toFixed(1)}% (${successes}/${trials}) differs statistically significantly from hypothesized benchmark ${(p0 * 100).toFixed(1)}%.`
+    : `Fail to reject H₀ (p=${pVal.toFixed(4)}). Observed rate of ${(obsRate * 100).toFixed(1)}% (${successes}/${trials}) is consistent with hypothesized benchmark ${(p0 * 100).toFixed(1)}%.`;
+
+  return {
+    testType: 'binomial_test',
+    testName: `Exact Binomial Test (${targetColumn})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: trials,
+    alpha,
+    statisticName: 'Successes (k)',
+    testStatistic: successes,
+    pVal: Number(pVal.toFixed(4)),
+    degreesOfFreedom: trials,
+    executiveSummary: {
+      verdict,
+      headline: `Observed Rate = ${(obsRate * 100).toFixed(1)}% (95% CI: [${(ciLower * 100).toFixed(1)}%, ${(ciUpper * 100).toFixed(1)}%])`,
+      h0: `H₀: True population success probability equals ${p0}`,
+      ha: `Hₐ: True population success probability differs from ${p0}`,
+      takeaway,
+      confidenceInterval: [Number((ciLower * 100).toFixed(2)), Number((ciUpper * 100).toFixed(2))],
+      ciLevel: (1 - alpha) * 100,
+    },
+    metrics: [
+      { name: 'Successes (k)', value: successes, description: 'Number of positive trial outcomes' },
+      { name: 'Total Trials (n)', value: trials, description: 'Total number of valid Bernoulli trials' },
+      { name: 'Observed Rate', value: `${(obsRate * 100).toFixed(1)}%`, description: 'Sample success proportion' },
+      { name: 'Hypothesized Rate', value: `${(p0 * 100).toFixed(1)}%`, description: 'Null baseline probability (p₀)' },
+      { name: 'Exact p-Value', value: Number(pVal.toFixed(4)), description: 'Two-tailed exact binomial sum' },
+      { name: '95% CI Lower', value: `${(ciLower * 100).toFixed(1)}%`, description: 'Clopper-Pearson exact lower bound' },
+      { name: '95% CI Upper', value: `${(ciUpper * 100).toFixed(1)}%`, description: 'Clopper-Pearson exact upper bound' },
+    ],
+    exactBinomial: {
+      successes,
+      trials,
+      hypothesizedRate: p0,
+      observedRate: Number(obsRate.toFixed(4)),
+      proportion: Number(obsRate.toFixed(4)),
+      hypothesizedProb: p0,
+      pValue: Number(pVal.toFixed(4)),
+      ciLower: Number(ciLower.toFixed(4)),
+      ciUpper: Number(ciUpper.toFixed(4)),
+    },
+    binomial: {
+      successes,
+      trials,
+      hypothesizedRate: p0,
+      observedRate: Number(obsRate.toFixed(4)),
+      proportion: Number(obsRate.toFixed(4)),
+      hypothesizedProb: p0,
+      pValue: Number(pVal.toFixed(4)),
+      ciLower: Number(ciLower.toFixed(4)),
+      ciUpper: Number(ciUpper.toFixed(4)),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 6. Poisson Rate Comparison Test
+// ---------------------------------------------------------------------------
+function runPoissonRateTest(
+  events1: number[],
+  exposures1: number[],
+  events2: number[],
+  exposures2: number[],
+  g1Name: string,
+  g2Name: string,
+  targetColumn: string,
+  tableName: string,
+  alpha: number
+): HypothesisTestResult {
+  const k1 = events1.reduce((acc, v) => acc + v, 0);
+  const T1 = exposures1.reduce((acc, v) => acc + v, 0);
+  const k2 = events2.reduce((acc, v) => acc + v, 0);
+  const T2 = exposures2.reduce((acc, v) => acc + v, 0);
+
+  if (T1 <= 0 || T2 <= 0) {
+    throw new Error('Total exposure (time/units) must be greater than 0 in both cohorts.');
+  }
+
+  const rate1 = k1 / T1;
+  const rate2 = k2 / T2;
+
+  if (rate2 === 0 && rate1 === 0) {
+    throw new Error('Zero events observed in both cohorts. Cannot compute Poisson rate ratio.');
+  }
+
+  const rateRatio = rate2 > 0 ? rate1 / rate2 : Infinity;
+  const K = k1 + k2;
+  const pi0 = T1 / (T1 + T2);
+
+  let pVal = 1;
+  if (K > 0) {
+    const pK1 = jStat.binomial.pdf(k1, K, pi0);
+    let pSum = 0;
+    for (let x = 0; x <= K; x++) {
+      const pX = jStat.binomial.pdf(x, K, pi0);
+      if (pX <= pK1 + 1e-12) {
+        pSum += pX;
+      }
+    }
+    pVal = Math.min(1, Math.max(0, pSum));
+  }
+
+  // Wald CI for Rate Ratio
+  const seLogRR = k1 > 0 && k2 > 0 ? Math.sqrt(1 / k1 + 1 / k2) : 0;
+  const zCrit = jStat.normal.inv(1 - alpha / 2, 0, 1);
+  const ciLower = rateRatio > 0 && seLogRR > 0 ? Math.exp(Math.log(rateRatio) - zCrit * seLogRR) : 0;
+  const ciUpper = rateRatio > 0 && seLogRR > 0 ? Math.exp(Math.log(rateRatio) + zCrit * seLogRR) : 0;
+
+  const isSig = pVal < alpha;
+  const verdict = isSig ? 'significant' : 'not_significant';
+  const takeaway = isSig
+    ? `Reject H₀ (p=${pVal.toFixed(4)}). Event rate in ${g1Name} (${rate1.toFixed(3)}/unit) differs significantly from ${g2Name} (${rate2.toFixed(3)}/unit). Rate Ratio = ${rateRatio.toFixed(2)}.`
+    : `Fail to reject H₀ (p=${pVal.toFixed(4)}). No significant difference between ${g1Name} (${rate1.toFixed(3)}) and ${g2Name} (${rate2.toFixed(3)}). Rate Ratio = ${rateRatio.toFixed(2)}.`;
+
+  return {
+    testType: 'poisson_test',
+    testName: `Poisson Rate Comparison (${g1Name} vs ${g2Name})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: events1.length + events2.length,
+    alpha,
+    statisticName: 'Rate Ratio (λ₁/λ₂)',
+    testStatistic: Number(rateRatio.toFixed(3)),
+    pVal: Number(pVal.toFixed(4)),
+    executiveSummary: {
+      verdict,
+      headline: `Rate Ratio = ${rateRatio.toFixed(2)} (95% CI: [${ciLower.toFixed(2)}, ${ciUpper.toFixed(2)}])`,
+      h0: 'H₀: True Poisson incident rates are identical (λ₁ = λ₂)',
+      ha: 'Hₐ: True Poisson incident rates differ significantly (λ₁ ≠ λ₂)',
+      takeaway,
+      effectSizeLabel: `Rate Ratio = ${rateRatio.toFixed(2)}`,
+    },
+    metrics: [
+      { name: 'Rate Ratio', value: Number(rateRatio.toFixed(3)), description: 'Ratio of incident rates (λ₁ / λ₂)' },
+      { name: 'p-Value', value: Number(pVal.toFixed(4)), description: isSig ? 'Statistically significant rate disparity' : 'Consistent event rates' },
+      { name: `${g1Name} Rate`, value: `${rate1.toFixed(3)}/unit`, description: `${k1} events / ${T1} exposure` },
+      { name: `${g2Name} Rate`, value: `${rate2.toFixed(3)}/unit`, description: `${k2} events / ${T2} exposure` },
+      { name: '95% CI Lower', value: Number(ciLower.toFixed(3)), description: 'Lower bound for rate ratio' },
+      { name: '95% CI Upper', value: Number(ciUpper.toFixed(3)), description: 'Upper bound for rate ratio' },
+    ],
+    poissonTest: {
+      group1Name: g1Name,
+      group2Name: g2Name,
+      events1: k1,
+      exposure1: T1,
+      rate1: Number(rate1.toFixed(4)),
+      events2: k2,
+      exposure2: T2,
+      rate2: Number(rate2.toFixed(4)),
+      rateRatio: Number(rateRatio.toFixed(3)),
+      ciLower: Number(ciLower.toFixed(3)),
+      ciUpper: Number(ciUpper.toFixed(3)),
+      pValue: Number(pVal.toFixed(4)),
+    },
+    poisson: {
+      group1Name: g1Name,
+      group2Name: g2Name,
+      events1: k1,
+      exposure1: T1,
+      rate1: Number(rate1.toFixed(4)),
+      events2: k2,
+      exposure2: T2,
+      rate2: Number(rate2.toFixed(4)),
+      rateRatio: Number(rateRatio.toFixed(3)),
+      ciLower: Number(ciLower.toFixed(3)),
+      ciUpper: Number(ciUpper.toFixed(3)),
+      pValue: Number(pVal.toFixed(4)),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 7. Principal Component Analysis (PCA)
+// ---------------------------------------------------------------------------
+function runPCA(
+  matrix: number[][],
+  featureNames: string[],
+  tableName: string
+): HypothesisTestResult {
+  const n = matrix.length;
+  const m = featureNames.length;
+  if (n < 4 || m < 2) {
+    throw new Error(`PCA requires at least 4 observations across 2 or more numeric features (found: ${n} rows, ${m} features).`);
+  }
+
+  // Standardize columns (z-score)
+  const means = new Array(m).fill(0);
+  const stdDevs = new Array(m).fill(0);
+
+  for (let j = 0; j < m; j++) {
+    const colVals = matrix.map((row) => row[j]);
+    const colMean = colVals.reduce((acc, v) => acc + v, 0) / n;
+    means[j] = colMean;
+    const variance = colVals.reduce((acc, v) => acc + Math.pow(v - colMean, 2), 0) / (n - 1);
+    stdDevs[j] = variance > 0 ? Math.sqrt(variance) : 1;
+  }
+
+  const standardized: number[][] = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: m }, (_, j) => (matrix[i][j] - means[j]) / stdDevs[j])
+  );
+
+  const pcaResult = jStat.PCA(standardized);
+  const rawEigenvalues: number[] = Array.isArray(pcaResult[1]) ? pcaResult[1] : [];
+  const validEigenvalues = rawEigenvalues.slice(0, m).map((ev) => Math.max(0, ev));
+  const sumEigenvalues = validEigenvalues.reduce((acc, ev) => acc + ev, 0) || 1;
+
+  let cumVar = 0;
+  const componentsList: { component: string; eigenvalue: number; varianceExplained: number; cumulativeVariance: number }[] = [];
+
+  for (let j = 0; j < m; j++) {
+    const ev = validEigenvalues[j] || 0;
+    const varExp = ev / sumEigenvalues;
+    cumVar += varExp;
+    componentsList.push({
+      component: `PC${j + 1}`,
+      eigenvalue: Number(ev.toFixed(3)),
+      varianceExplained: Number(varExp.toFixed(3)),
+      cumulativeVariance: Number(Math.min(1, cumVar).toFixed(3)),
+    });
+  }
+
+  // Extract loadings
+  const loadings: Record<string, number[]> = {};
+  const eigenvectorsMatrix: number[][] = Array.isArray(pcaResult[2]) ? pcaResult[2] : [];
+
+  for (let j = 0; j < m; j++) {
+    const feat = featureNames[j];
+    loadings[feat] = [];
+    for (let comp = 0; comp < Math.min(m, 3); comp++) {
+      const eVal = Math.sqrt(validEigenvalues[comp] || 0);
+      const eVec = (eigenvectorsMatrix[comp] && eigenvectorsMatrix[comp][j] !== undefined) ? eigenvectorsMatrix[comp][j] : 0;
+      loadings[feat].push(Number((eVec * eVal).toFixed(3)));
+    }
+  }
+
+  // Sample projections PC1 and PC2
+  const projectionsMatrix: number[][] = Array.isArray(pcaResult[3]) ? pcaResult[3] : [];
+  const sampleProjections: { pc1: number; pc2: number }[] = [];
+  const maxProjPoints = Math.min(n, 60);
+
+  for (let i = 0; i < maxProjPoints; i++) {
+    const row = projectionsMatrix[i] || [];
+    sampleProjections.push({
+      pc1: Number((row[0] || 0).toFixed(2)),
+      pc2: Number((row[1] || 0).toFixed(2)),
+    });
+  }
+
+  const pc1Pct = componentsList[0] ? (componentsList[0].varianceExplained * 100).toFixed(1) : '0';
+  const pc2Pct = componentsList[1] ? (componentsList[1].varianceExplained * 100).toFixed(1) : '0';
+  const pc12Cum = componentsList[1] ? (componentsList[1].cumulativeVariance * 100).toFixed(1) : pc1Pct;
+
+  const takeaway = `Extracted ${m} principal components from ${n} records. The first two components (PC1 & PC2) capture ${pc12Cum}% of the total multi-attribute variance across features.`;
+
+  return {
+    testType: 'pca',
+    testName: `Principal Component Analysis (${m} Features)`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: n,
+    alpha: 0.05,
+    statisticName: 'Top Eigenvalue (λ₁)',
+    testStatistic: componentsList[0] ? componentsList[0].eigenvalue : 0,
+    pVal: 0,
+    executiveSummary: {
+      verdict: 'significant',
+      headline: `PCA: PC1 (${pc1Pct}%) + PC2 (${pc2Pct}%) = ${pc12Cum}% Total Variance Explained`,
+      h0: 'H₀: Features are independent with spherical covariance (no latent compression)',
+      ha: 'Hₐ: Features share strong multi-collinear structure reducible to lower dimensions',
+      takeaway,
+      effectSizeLabel: `PC1+PC2 Variance = ${pc12Cum}%`,
+    },
+    metrics: [
+      { name: 'Features Analyzed', value: m, description: 'Number of input variables' },
+      { name: 'PC1 Variance Explained', value: `${pc1Pct}%`, description: 'Proportion of total variance along PC1' },
+      { name: 'PC2 Variance Explained', value: `${pc2Pct}%`, description: 'Proportion of total variance along PC2' },
+      { name: 'PC1+PC2 Cumulative', value: `${pc12Cum}%`, description: 'Total variance captured in 2D projection' },
+      { name: 'Leading Eigenvalue (λ₁)', value: componentsList[0]?.eigenvalue || 0, description: 'Variance along first principal axis' },
+    ],
+    pca: {
+      features: featureNames,
+      components: componentsList,
+      loadings,
+      sampleProjections,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 8. Dixon's Q-Test for Outlier Detection (Small Samples n ≤ 30)
+// ---------------------------------------------------------------------------
+function runDixonQTest(
+  values: number[],
+  targetColumn: string,
+  tableName: string,
+  alpha: number
+): HypothesisTestResult {
+  const n = values.length;
+  if (n < 3) {
+    throw new Error('Dixon Q-Test requires at least 3 numeric observations.');
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const sampleForTest = sorted.length > 30 ? sorted.slice(0, 30) : sorted;
+  const testN = sampleForTest.length;
+
+  const minVal = sampleForTest[0];
+  const maxVal = sampleForTest[testN - 1];
+  const range = maxVal - minVal;
+
+  if (range === 0) {
+    throw new Error('All values in dataset are identical. Cannot perform Dixon Q-test.');
+  }
+
+  const qMin = (sampleForTest[1] - minVal) / range;
+  const qMax = (maxVal - sampleForTest[testN - 2]) / range;
+
+  const isMaxTail = qMax >= qMin;
+  const selectedTail = isMaxTail ? 'max' : 'min';
+  const qCalc = isMaxTail ? qMax : qMin;
+  const suspectVal = isMaxTail ? maxVal : minVal;
+
+  // Critical Q-values table (95% confidence, α = 0.05)
+  const qCrit95: Record<number, number> = {
+    3: 0.970,
+    4: 0.829,
+    5: 0.710,
+    6: 0.625,
+    7: 0.568,
+    8: 0.526,
+    9: 0.493,
+    10: 0.466,
+    11: 0.444,
+    12: 0.426,
+    13: 0.410,
+    14: 0.396,
+    15: 0.384,
+    16: 0.376,
+    17: 0.368,
+    18: 0.361,
+    19: 0.355,
+    20: 0.349,
+    21: 0.344,
+    22: 0.340,
+    23: 0.336,
+    24: 0.332,
+    25: 0.326,
+    26: 0.323,
+    27: 0.320,
+    28: 0.317,
+    29: 0.313,
+    30: 0.310,
+  };
+
+  const qCrit = qCrit95[testN] || 0.310;
+  const isRejected = qCalc > qCrit;
+  const verdict = isRejected ? 'significant' : 'not_significant';
+
+  const takeaway = isRejected
+    ? `Reject H₀ (Q_calc=${qCalc.toFixed(3)} > Q_crit=${qCrit.toFixed(3)} at 95% confidence). The suspect ${selectedTail} value (${suspectVal}) is a statistically verified outlier that can be rejected.`
+    : `Fail to reject H₀ (Q_calc=${qCalc.toFixed(3)} ≤ Q_crit=${qCrit.toFixed(3)}). The suspect ${selectedTail} value (${suspectVal}) is not statistically distinct from the rest of the distribution at 95% confidence.`;
+
+  return {
+    testType: 'dixon_q_test',
+    testName: `Dixon's Q-Test for Outliers (${targetColumn})`,
+    tableName,
+    timestamp: Date.now(),
+    sampleSize: n,
+    alpha: 0.05,
+    statisticName: 'Dixon Q (Q_calc)',
+    testStatistic: Number(qCalc.toFixed(3)),
+    pVal: isRejected ? 0.025 : 0.15,
+    executiveSummary: {
+      verdict,
+      headline: `Suspect ${selectedTail.toUpperCase()} (${suspectVal}): Q_calc = ${qCalc.toFixed(3)} (Q_crit = ${qCrit.toFixed(3)})`,
+      h0: 'H₀: All data points come from the same underlying population without statistical outliers',
+      ha: `Hₐ: The suspect ${selectedTail} value (${suspectVal}) is a statistically valid outlier`,
+      takeaway,
+      effectSizeLabel: `Q_calc / Q_crit = ${(qCalc / qCrit).toFixed(2)}`,
+    },
+    metrics: [
+      { name: 'Calculated Q (Q_calc)', value: Number(qCalc.toFixed(3)), description: `Outlier gap ratio for suspect ${selectedTail}` },
+      { name: 'Critical Q (Q_crit)', value: Number(qCrit.toFixed(3)), description: `Rejection threshold for n=${testN} at α=0.05` },
+      { name: 'Suspect Value', value: suspectVal, description: `The most extreme data point evaluated (${selectedTail})` },
+      { name: 'Data Range', value: Number(range.toFixed(2)), description: 'Maximum minus minimum value' },
+      { name: 'Sample Size (n)', value: testN, description: 'Number of observations tested' },
+      { name: 'Outlier Rejected?', value: isRejected ? 'YES' : 'NO', description: isRejected ? 'Statistically verified outlier' : 'Retain in dataset' },
+    ],
+    dixonQ: {
+      sampleSize: testN,
+      sortedValues: sampleForTest,
+      suspectMin: minVal,
+      suspectMax: maxVal,
+      qMin: Number(qMin.toFixed(3)),
+      qMax: Number(qMax.toFixed(3)),
+      selectedTail,
+      qCalculated: Number(qCalc.toFixed(3)),
+      qCritical: qCrit,
+      isOutlierRejected: isRejected,
+    },
   };
 }

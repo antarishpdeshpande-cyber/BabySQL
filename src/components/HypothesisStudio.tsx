@@ -51,56 +51,105 @@ interface HypothesisStudioProps {
 interface TestDescriptor {
   type: HypothesisTestType;
   title: string;
-  category: 'Means' | 'Categorical' | 'Predictive' | 'Non-Parametric' | 'Clustering';
+  category: 'Means & Variance' | 'Categorical & Rates' | 'Predictive' | 'Non-Parametric' | 'Multivariate & Clusters' | 'Outliers & Diagnostics';
+  isCommon?: boolean;
   shortDesc: string;
   badge: string;
 }
 
 const TEST_OPTIONS: TestDescriptor[] = [
-  // Means
+  // Means & Variance
   {
     type: 'welch_ttest',
     title: "Two-Sample Welch's t-Test",
-    category: 'Means',
+    category: 'Means & Variance',
+    isCommon: true,
     shortDesc: 'A/B testing: Compare means of two independent cohorts without equal variance assumption',
     badge: 'A/B Means',
   },
   {
     type: 'one_sample_ttest',
     title: 'One-Sample t-Test',
-    category: 'Means',
+    category: 'Means & Variance',
     shortDesc: 'Test if a numeric metric statistically differs from an established KPI benchmark target',
     badge: 'Benchmark',
   },
   {
     type: 'paired_ttest',
     title: 'Paired Samples t-Test',
-    category: 'Means',
+    category: 'Means & Variance',
+    isCommon: true,
     shortDesc: 'Compare repeated measures or before-and-after metrics for the exact same subjects',
     badge: 'Before / After',
   },
   {
     type: 'one_way_anova',
     title: 'One-Way ANOVA (F-Test)',
-    category: 'Means',
+    category: 'Means & Variance',
+    isCommon: true,
     shortDesc: 'Compare continuous metric variation across 3 or more categorical segments or departments',
     badge: 'Multi-Group',
   },
+  {
+    type: 'two_way_anova',
+    title: 'Two-Way Factorial ANOVA (A × B + Interaction)',
+    category: 'Means & Variance',
+    isCommon: true,
+    shortDesc: 'Evaluate simultaneous main effects of two categorical factors and their interaction on a continuous metric',
+    badge: '2-Factor ANOVA',
+  },
+  {
+    type: 'f_test_variance',
+    title: 'Two-Sample F-Test for Equality of Variances',
+    category: 'Means & Variance',
+    shortDesc: 'Test whether two cohorts have equal population variances (σ₁² = σ₂²) to verify homoscedasticity',
+    badge: 'Variance Ratio',
+  },
 
-  // Categorical & Proportions
+  // Categorical & Rates
   {
     type: 'proportion_ztest',
     title: 'Two-Sample Z-Test of Proportions',
-    category: 'Categorical',
+    category: 'Categorical & Rates',
+    isCommon: true,
     shortDesc: 'Digital A/B testing: Test if conversion rate A significantly outperforms conversion rate B',
     badge: 'Conversion A/B',
   },
   {
     type: 'chi_square',
     title: 'Chi-Square Independence (χ²)',
-    category: 'Categorical',
+    category: 'Categorical & Rates',
+    isCommon: true,
     shortDesc: 'Test whether two categorical attributes are statistically associated or independent',
     badge: 'Contingency',
+  },
+  {
+    type: 'chi_square_gof',
+    title: 'Chi-Square Goodness-of-Fit Test',
+    category: 'Categorical & Rates',
+    shortDesc: 'Test whether observed category frequencies fit an expected uniform or hypothesized distribution',
+    badge: 'Goodness-of-Fit',
+  },
+  {
+    type: 'mcnemar_test',
+    title: "McNemar's Paired Test (Before vs After Conversion)",
+    category: 'Categorical & Rates',
+    shortDesc: 'Test paired binary conversion transitions before and after an intervention with Edwards correction',
+    badge: 'Paired Binary',
+  },
+  {
+    type: 'binomial_test',
+    title: 'Exact Binomial Test (Sign Test)',
+    category: 'Categorical & Rates',
+    shortDesc: 'Small-sample exact test of success probability against a benchmark p₀ with Clopper-Pearson CI',
+    badge: 'Exact Binomial',
+  },
+  {
+    type: 'poisson_test',
+    title: 'Poisson Rate Comparison Test (Incidence Rates)',
+    category: 'Categorical & Rates',
+    shortDesc: 'Compare event occurrence rates per unit exposure between two cohorts with rate ratio CI',
+    badge: 'Poisson Rates',
   },
 
   // Predictive & Multivariate
@@ -108,6 +157,7 @@ const TEST_OPTIONS: TestDescriptor[] = [
     type: 'linear_regression',
     title: 'OLS Linear Regression (Single X)',
     category: 'Predictive',
+    isCommon: true,
     shortDesc: 'Predict continuous outcome Y from a single independent predictor X with slope & intercept',
     badge: 'Simple OLS',
   },
@@ -129,6 +179,7 @@ const TEST_OPTIONS: TestDescriptor[] = [
     type: 'correlation',
     title: 'Pearson Correlation Test',
     category: 'Predictive',
+    isCommon: true,
     shortDesc: 'Evaluate the direction and linear relationship strength (r) between two continuous metrics',
     badge: 'Linear Correlation',
   },
@@ -170,14 +221,41 @@ const TEST_OPTIONS: TestDescriptor[] = [
     badge: 'Monotonic Rank',
   },
 
-  // Segmentation & Clustering
+  // Multivariate & Clusters
   {
     type: 'kmeans_clustering',
     title: 'K-Means Cluster Analysis (Segmentation)',
-    category: 'Clustering',
+    category: 'Multivariate & Clusters',
     shortDesc: 'Unsupervised machine learning: Partition records into k natural segments with WCSS & centroids',
     badge: 'Cluster Analysis',
   },
+  {
+    type: 'pca',
+    title: 'Principal Component Analysis (PCA)',
+    category: 'Multivariate & Clusters',
+    shortDesc: 'Extract principal eigenvectors, scree variance explained, loadings matrix, and 2D projections',
+    badge: 'PCA Dimension Reduction',
+  },
+
+  // Outliers & Diagnostics
+  {
+    type: 'dixon_q_test',
+    title: "Dixon's Q-Test (Outlier Detection for n ≤ 30)",
+    category: 'Outliers & Diagnostics',
+    shortDesc: 'Detect and mathematically verify extreme minimum/maximum outliers in small datasets',
+    badge: 'Outlier Detection',
+  },
+];
+
+const CATEGORY_TABS = [
+  '⭐ Common',
+  'Means & Variance',
+  'Categorical & Rates',
+  'Predictive',
+  'Non-Parametric',
+  'Multivariate & Clusters',
+  'Outliers & Diagnostics',
+  'All',
 ];
 
 export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
@@ -186,7 +264,7 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
   onSampleCreated,
 }) => {
   const [selectedTable, setSelectedTable] = useState<string>(activeTableName || (tables[0]?.name ?? ''));
-  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [categoryFilter, setCategoryFilter] = useState<string>('⭐ Common');
   const [testType, setTestType] = useState<HypothesisTestType>('welch_ttest');
   const [targetColumn, setTargetColumn] = useState<string>('');
   const [groupColumn, setGroupColumn] = useState<string>('');
@@ -258,7 +336,7 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
         const remainingNum = numericColumns.filter((c) => c !== targetColumn);
         setSecondaryColumn(remainingNum[0] || columns[1] || columns[0]);
       }
-      if (testType === 'cronbach_alpha') {
+      if (testType === 'cronbach_alpha' || testType === 'pca') {
         if (selectedPredictors.length === 0 || selectedPredictors.some((p) => !columns.includes(p))) {
           setSelectedPredictors(numericColumns.slice(0, Math.min(5, numericColumns.length)));
         }
@@ -275,9 +353,17 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
   };
 
   const filteredTests = useMemo(() => {
+    if (categoryFilter === '⭐ Common') return TEST_OPTIONS.filter((t) => t.isCommon);
     if (categoryFilter === 'All') return TEST_OPTIONS;
     return TEST_OPTIONS.filter((t) => t.category === categoryFilter);
   }, [categoryFilter]);
+
+  // If current test is not in filtered tests, switch to first test of category
+  useEffect(() => {
+    if (filteredTests.length > 0 && !filteredTests.some((t) => t.type === testType)) {
+      setTestType(filteredTests[0].type);
+    }
+  }, [filteredTests, testType]);
 
   const activeTestMeta = useMemo(() => {
     return TEST_OPTIONS.find((t) => t.type === testType) || TEST_OPTIONS[0];
@@ -450,7 +536,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
           <div>
             <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-400 mb-1">Model Category</label>
             <div className="flex flex-wrap gap-1">
-              {['All', 'Means', 'Categorical', 'Predictive', 'Non-Parametric', 'Clustering'].map((cat) => (
+              {CATEGORY_TABS.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
@@ -494,11 +580,23 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
           {/* Variable Pickers */}
           <div className="space-y-3 pt-1 border-t border-border/60">
             {/* Target Column (Dependent Variable / Metric) */}
-            {testType !== 'kmeans_clustering' && testType !== 'cronbach_alpha' && (
+            {testType !== 'kmeans_clustering' && testType !== 'cronbach_alpha' && testType !== 'pca' && (
               <div>
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  {testType === 'chi_square'
-                    ? 'First Categorical Variable (Rows)'
+                  {testType === 'chi_square' || testType === 'chi_square_gof'
+                    ? 'Categorical Variable (Frequencies / Categories)'
+                    : testType === 'mcnemar_test'
+                    ? 'Pre-Intervention / Time 1 Outcome (Binary)'
+                    : testType === 'binomial_test'
+                    ? 'Binary Trial Outcome Column (Pass/Fail)'
+                    : testType === 'poisson_test'
+                    ? 'Observed Event Count (Incidence Column)'
+                    : testType === 'dixon_q_test'
+                    ? 'Continuous Metric with Suspect Outlier (n ≤ 30)'
+                    : testType === 'two_way_anova'
+                    ? 'Dependent Continuous Outcome Metric (Y)'
+                    : testType === 'f_test_variance'
+                    ? 'Continuous Metric to Compare Variance'
                     : testType === 'proportion_ztest'
                     ? 'Binary Target Outcome Column (Success/Failure)'
                     : testType === 'logistic_regression'
@@ -512,7 +610,12 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                   onChange={(e) => setTargetColumn(e.target.value)}
                   className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
                 >
-                  {(testType === 'chi_square' ? categoricalColumns : testType === 'proportion_ztest' || testType === 'logistic_regression' ? columns : numericColumns).map((col) => (
+                  {(testType === 'chi_square' || testType === 'chi_square_gof'
+                    ? categoricalColumns
+                    : testType === 'proportion_ztest' || testType === 'logistic_regression' || testType === 'mcnemar_test' || testType === 'binomial_test'
+                    ? columns
+                    : numericColumns
+                  ).map((col) => (
                     <option key={col} value={col}>
                       {col}
                     </option>
@@ -521,11 +624,11 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               </div>
             )}
 
-            {/* Success Target Value for Proportion Z-Test */}
-            {testType === 'proportion_ztest' && (
+            {/* Success Target Value for Proportion Z-Test, McNemar, and Binomial */}
+            {(testType === 'proportion_ztest' || testType === 'mcnemar_test' || testType === 'binomial_test') && (
               <div>
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Success Target Value (e.g. 1, true, converted)
+                  Success Target Value (e.g. 1, true, converted, pass)
                 </label>
                 <input
                   type="text"
@@ -537,9 +640,12 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               </div>
             )}
 
-            {/* Grouping Column for 2-sample t-test, ANOVA, Mann-Whitney, Chi-Square, Proportions */}
+            {/* Grouping Column */}
             {(testType === 'welch_ttest' ||
               testType === 'one_way_anova' ||
+              testType === 'two_way_anova' ||
+              testType === 'f_test_variance' ||
+              testType === 'poisson_test' ||
               testType === 'mann_whitney' ||
               testType === 'kruskal_wallis' ||
               testType === 'proportion_ztest' ||
@@ -548,6 +654,12 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
                   {testType === 'chi_square'
                     ? 'Second Categorical Variable (Columns)'
+                    : testType === 'two_way_anova'
+                    ? 'Factor A (First Categorical Dimension)'
+                    : testType === 'f_test_variance'
+                    ? 'Grouping Column (2 Cohorts to Compare Variance)'
+                    : testType === 'poisson_test'
+                    ? 'Grouping Column (2 Cohorts to Compare Incidence Rates)'
                     : 'Grouping / Cohort Column (Categories)'}
                 </label>
                 <select
@@ -564,15 +676,24 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               </div>
             )}
 
-            {/* Paired Metric or Single Predictor */}
+            {/* Secondary Metric / Predictor / Factor B / After / Exposure */}
             {(testType === 'paired_ttest' ||
               testType === 'wilcoxon_signed_rank' ||
               testType === 'linear_regression' ||
               testType === 'correlation' ||
-              testType === 'spearman_correlation') && (
+              testType === 'spearman_correlation' ||
+              testType === 'two_way_anova' ||
+              testType === 'mcnemar_test' ||
+              testType === 'poisson_test') && (
               <div>
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  {testType === 'paired_ttest' || testType === 'wilcoxon_signed_rank'
+                  {testType === 'two_way_anova'
+                    ? 'Factor B (Second Categorical Dimension)'
+                    : testType === 'mcnemar_test'
+                    ? 'Post-Intervention / Time 2 Outcome (Binary)'
+                    : testType === 'poisson_test'
+                    ? 'Exposure / Person-Time Column (Optional)'
+                    : testType === 'paired_ttest' || testType === 'wilcoxon_signed_rank'
                     ? 'Second Paired Metric (Numeric)'
                     : testType === 'linear_regression'
                     ? 'Independent Predictor Variable (X)'
@@ -583,20 +704,44 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                   onChange={(e) => setSecondaryColumn(e.target.value)}
                   className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
                 >
-                  {numericColumns.map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
+                  {testType === 'two_way_anova'
+                    ? categoricalColumns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))
+                    : testType === 'mcnemar_test'
+                    ? columns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))
+                    : testType === 'poisson_test'
+                    ? [
+                        <option key="__none__" value="">
+                          (None - Uniform Unit Exposure 1.0)
+                        </option>,
+                        ...numericColumns.map((col) => (
+                          <option key={col} value={col}>
+                            {col}
+                          </option>
+                        )),
+                      ]
+                    : numericColumns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
                 </select>
               </div>
             )}
 
-            {/* Multi-Predictor / Feature Selector for Multiple Regression, Logistic, K-Means, and Cronbach's Alpha */}
+            {/* Multi-Predictor / Feature Selector for Multiple Regression, Logistic, K-Means, Cronbach, and PCA */}
             {(testType === 'multiple_regression' ||
               testType === 'logistic_regression' ||
               testType === 'kmeans_clustering' ||
-              testType === 'cronbach_alpha') && (
+              testType === 'cronbach_alpha' ||
+              testType === 'pca') && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] font-medium text-slate-700 dark:text-slate-400">
@@ -604,6 +749,8 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                       ? 'Select Scale Questions / Survey Items (2+ Required)'
                       : testType === 'kmeans_clustering'
                       ? 'Select Numeric Features to Cluster (2+ Required)'
+                      : testType === 'pca'
+                      ? 'Select Numeric Features for PCA (2+ Required)'
                       : 'Select Independent Predictors (X₁, X₂, ...)'}
                   </label>
                   <span className="text-[10px] font-mono text-cyan-800 dark:text-cyan-400 font-semibold">
@@ -636,7 +783,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                     type="button"
                     onClick={() => {
                       const candidates = numericColumns.filter(
-                        (col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || col !== targetColumn
+                        (col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || testType === 'pca' || col !== targetColumn
                       );
                       setSelectedPredictors(candidates);
                     }}
@@ -657,7 +804,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
 
                 <div className="max-h-40 overflow-y-auto p-2 rounded bg-background border border-border space-y-1">
                   {numericColumns
-                    .filter((col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || col !== targetColumn)
+                    .filter((col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || testType === 'pca' || col !== targetColumn)
                     .filter((col) => !predictorSearch || col.toLowerCase().includes(predictorSearch.toLowerCase()))
                     .map((col) => {
                       const isSelected = selectedPredictors.includes(col);
@@ -681,7 +828,7 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                       );
                     })}
                   {numericColumns
-                    .filter((col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || col !== targetColumn)
+                    .filter((col) => testType === 'kmeans_clustering' || testType === 'cronbach_alpha' || testType === 'pca' || col !== targetColumn)
                     .filter((col) => !predictorSearch || col.toLowerCase().includes(predictorSearch.toLowerCase())).length === 0 && (
                     <div className="text-[11px] text-muted text-center py-2 italic">
                       No matching variables found.
@@ -716,24 +863,27 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               </div>
             )}
 
-            {/* Benchmark Input for One-Sample t-test */}
-            {testType === 'one_sample_ttest' && (
+            {/* Benchmark Input for One-Sample t-test & Exact Binomial Test */}
+            {(testType === 'one_sample_ttest' || testType === 'binomial_test') && (
               <div>
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                  Target Benchmark Value (μ₀)
+                  {testType === 'binomial_test'
+                    ? 'Hypothesized Success Probability p₀ (e.g. 0.50)'
+                    : 'Target Benchmark Value (μ₀)'}
                 </label>
                 <input
                   type="number"
+                  step={testType === 'binomial_test' ? '0.01' : '1'}
                   value={benchmarkValue}
                   onChange={(e) => setBenchmarkValue(Number(e.target.value))}
-                  className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
-                  placeholder="e.g. 100"
+                  className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary font-mono"
+                  placeholder={testType === 'binomial_test' ? '0.50' : 'e.g. 100'}
                 />
               </div>
             )}
 
-            {/* Significance Level Alpha (Not needed for unsupervised clustering) */}
-            {testType !== 'kmeans_clustering' && (
+            {/* Significance Level Alpha */}
+            {testType !== 'kmeans_clustering' && testType !== 'pca' && (
               <div>
                 <label className="block text-[11px] font-medium text-slate-400 mb-1">
                   Significance Level (α)
@@ -1617,6 +1767,557 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Two-Way Factorial ANOVA Card & Cell Means */}
+            {result.twoWayAnova && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-surface border border-border">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <TableIcon className="w-3.5 h-3.5 text-primary" />
+                      <span>Two-Way Factorial ANOVA Summary Table</span>
+                    </span>
+                    <span className="text-[10px] text-muted font-mono">
+                      Type I / III Sequential Partition of Variance
+                    </span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-[11px] text-muted uppercase bg-surface-raised/40 border-b border-border font-medium">
+                        <tr>
+                          <th className="px-3 py-2">Source of Variation</th>
+                          <th className="px-3 py-2 font-mono">SS</th>
+                          <th className="px-3 py-2 font-mono">df</th>
+                          <th className="px-3 py-2 font-mono">MS</th>
+                          <th className="px-3 py-2 font-mono">F-Ratio</th>
+                          <th className="px-3 py-2 font-mono">p-Value</th>
+                          <th className="px-3 py-2 font-mono">Partial η²</th>
+                          <th className="px-3 py-2 font-sans">Significance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border font-mono text-[11px]">
+                        {/* Factor A */}
+                        <tr className="hover:bg-surface-raised/30">
+                          <td className="px-3 py-2 font-sans font-medium text-slate-200">
+                            Factor A: {result.twoWayAnova.factorAName}
+                          </td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.factorAEffects.ss}</td>
+                          <td className="px-3 py-2 text-slate-400">{result.twoWayAnova.factorAEffects.df}</td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.factorAEffects.ms}</td>
+                          <td className="px-3 py-2 font-bold text-cyan-300">{result.twoWayAnova.factorAEffects.fStat}</td>
+                          <td className="px-3 py-2 text-slate-200">{result.twoWayAnova.factorAEffects.pVal < 0.0001 ? '< 0.0001' : result.twoWayAnova.factorAEffects.pVal}</td>
+                          <td className="px-3 py-2 text-emerald-400 font-bold">{result.twoWayAnova.factorAEffects.partialEtaSq}</td>
+                          <td className="px-3 py-2 font-sans">
+                            {result.twoWayAnova.factorAEffects.isSignificant ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
+                                Sig (p &lt; {result.alpha})
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400 text-[10px]">
+                                Not Sig
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Factor B */}
+                        <tr className="hover:bg-surface-raised/30">
+                          <td className="px-3 py-2 font-sans font-medium text-slate-200">
+                            Factor B: {result.twoWayAnova.factorBName}
+                          </td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.factorBEffects.ss}</td>
+                          <td className="px-3 py-2 text-slate-400">{result.twoWayAnova.factorBEffects.df}</td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.factorBEffects.ms}</td>
+                          <td className="px-3 py-2 font-bold text-cyan-300">{result.twoWayAnova.factorBEffects.fStat}</td>
+                          <td className="px-3 py-2 text-slate-200">{result.twoWayAnova.factorBEffects.pVal < 0.0001 ? '< 0.0001' : result.twoWayAnova.factorBEffects.pVal}</td>
+                          <td className="px-3 py-2 text-emerald-400 font-bold">{result.twoWayAnova.factorBEffects.partialEtaSq}</td>
+                          <td className="px-3 py-2 font-sans">
+                            {result.twoWayAnova.factorBEffects.isSignificant ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
+                                Sig (p &lt; {result.alpha})
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400 text-[10px]">
+                                Not Sig
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Interaction A x B */}
+                        <tr className="hover:bg-surface-raised/30 bg-primary/5">
+                          <td className="px-3 py-2 font-sans font-semibold text-cyan-300">
+                            Interaction: {result.twoWayAnova.factorAName} × {result.twoWayAnova.factorBName}
+                          </td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.interactionEffects.ss}</td>
+                          <td className="px-3 py-2 text-slate-400">{result.twoWayAnova.interactionEffects.df}</td>
+                          <td className="px-3 py-2 text-slate-300">{result.twoWayAnova.interactionEffects.ms}</td>
+                          <td className="px-3 py-2 font-bold text-cyan-300">{result.twoWayAnova.interactionEffects.fStat}</td>
+                          <td className="px-3 py-2 text-slate-200">{result.twoWayAnova.interactionEffects.pVal < 0.0001 ? '< 0.0001' : result.twoWayAnova.interactionEffects.pVal}</td>
+                          <td className="px-3 py-2 text-emerald-400 font-bold">{result.twoWayAnova.interactionEffects.partialEtaSq}</td>
+                          <td className="px-3 py-2 font-sans">
+                            {result.twoWayAnova.interactionEffects.isSignificant ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
+                                Sig Interaction
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400 text-[10px]">
+                                No Interaction
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Within Error */}
+                        <tr className="hover:bg-surface-raised/30 text-slate-400">
+                          <td className="px-3 py-2 font-sans">Within-Cell Residual Error</td>
+                          <td className="px-3 py-2">{result.twoWayAnova.errorEffects.ss}</td>
+                          <td className="px-3 py-2">{result.twoWayAnova.errorEffects.df}</td>
+                          <td className="px-3 py-2">{result.twoWayAnova.errorEffects.ms}</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2 font-sans">—</td>
+                        </tr>
+                        {/* Total */}
+                        <tr className="font-bold border-t border-border/80 bg-surface-raised/40">
+                          <td className="px-3 py-2 font-sans text-slate-100">Total Variance</td>
+                          <td className="px-3 py-2 text-slate-100">{result.twoWayAnova.totalEffects.ss}</td>
+                          <td className="px-3 py-2 text-slate-100">{result.twoWayAnova.totalEffects.df}</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2">—</td>
+                          <td className="px-3 py-2 font-sans">—</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Cell Means Table */}
+                <div className="p-4 rounded-xl bg-surface border border-border">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 mb-3 flex items-center gap-1.5">
+                    <TableIcon className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Factorial Sub-Group Cell Means ({result.twoWayAnova.factorAName} × {result.twoWayAnova.factorBName})</span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-[11px] text-muted uppercase bg-surface-raised/40 border-b border-border">
+                        <tr>
+                          <th className="px-3 py-2">{result.twoWayAnova.factorAName}</th>
+                          <th className="px-3 py-2">{result.twoWayAnova.factorBName}</th>
+                          <th className="px-3 py-2 font-mono">Count (n)</th>
+                          <th className="px-3 py-2 font-mono">Cell Mean (ȳ)</th>
+                          <th className="px-3 py-2 font-mono">Cell Std Dev (s)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border font-mono text-[11px]">
+                        {result.twoWayAnova.cellMeans.map((c, idx) => (
+                          <tr key={idx} className="hover:bg-surface-raised/30">
+                            <td className="px-3 py-2 font-sans font-medium text-slate-200">{c.factorA}</td>
+                            <td className="px-3 py-2 font-sans text-slate-300">{c.factorB}</td>
+                            <td className="px-3 py-2 text-slate-400">{c.count}</td>
+                            <td className="px-3 py-2 font-bold text-cyan-300">{c.mean}</td>
+                            <td className="px-3 py-2 text-slate-300">{c.stdDev}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Two-Sample F-Test for Equality of Variances Card */}
+            {result.fTestVariance && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Two-Sample Variance Ratio Test (Homoscedasticity)</span>
+                  </span>
+                  <span className="text-[10px] text-muted font-mono">
+                    H₀: σ₁² / σ₂² = 1.0
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Cohort 1: {result.fTestVariance.group1Name}</span>
+                    <span className="text-lg font-bold text-cyan-300">
+                      s₁² = {result.fTestVariance.var1}
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      Std Dev: {result.fTestVariance.sd1} • n = {result.fTestVariance.n1}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Cohort 2: {result.fTestVariance.group2Name}</span>
+                    <span className="text-lg font-bold text-slate-200">
+                      s₂² = {result.fTestVariance.var2}
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      Std Dev: {result.fTestVariance.sd2} • n = {result.fTestVariance.n2}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Variance Ratio (F)</span>
+                    <span className="text-lg font-bold text-emerald-400">
+                      F = {result.fTestVariance.fRatio}
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      95% CI: [{result.fTestVariance.ciLower}, {result.fTestVariance.ciUpper}]
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-surface-raised/40 border border-border text-xs flex items-center justify-between">
+                  <span className="text-slate-300">
+                    Equality of Variance Verdict:
+                  </span>
+                  <span className={`px-2 py-0.5 rounded font-semibold text-[11px] ${
+                    result.fTestVariance.isEqualVariance
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-amber-500/20 text-amber-300'
+                  }`}>
+                    {result.fTestVariance.isEqualVariance
+                      ? '✓ Equal Variances (Homoscedastic - Student t-test valid)'
+                      : '⚠ Unequal Variances (Heteroscedastic - Welch t-test required)'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Chi-Square Goodness-of-Fit Card */}
+            {result.chiSquareGof && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                    <TableIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>Goodness-of-Fit Category Breakdown (Observed vs Expected)</span>
+                  </h4>
+                  <span className="text-[10px] text-muted font-mono">
+                    χ² = {result.chiSquareGof.chiSquare} • df = {result.chiSquareGof.df} • p = {result.chiSquareGof.pValue}
+                  </span>
+                </div>
+                <div className="overflow-x-auto border border-border/80 rounded-lg">
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-[11px] text-muted uppercase bg-surface-raised/40 border-b border-border">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Category Level</th>
+                        <th className="px-3 py-2 font-medium font-mono">Observed (O)</th>
+                        <th className="px-3 py-2 font-medium font-mono">Expected (E)</th>
+                        <th className="px-3 py-2 font-medium font-mono">Residual (O - E)</th>
+                        <th className="px-3 py-2 font-medium font-mono">Std Residual ((O-E)/√E)</th>
+                        <th className="px-3 py-2 font-medium font-sans">Divergence Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border font-mono text-[11px]">
+                      {result.chiSquareGof.categories.map((cat) => {
+                        const isOver = cat.residual > 0;
+                        const isExtreme = Math.abs(cat.stdResidual) > 2;
+                        return (
+                          <tr key={cat.category} className="hover:bg-surface-raised/30">
+                            <td className="px-3 py-2 font-sans font-medium text-slate-200">{cat.category}</td>
+                            <td className="px-3 py-2 font-bold text-slate-100">{cat.observed}</td>
+                            <td className="px-3 py-2 text-slate-400">{cat.expected}</td>
+                            <td className={`px-3 py-2 font-bold ${isOver ? 'text-emerald-400' : 'text-amber-400'}`}>
+                              {isOver ? `+${cat.residual}` : cat.residual}
+                            </td>
+                            <td className={`px-3 py-2 font-bold ${isExtreme ? 'text-rose-400' : 'text-slate-300'}`}>
+                              {cat.stdResidual}
+                            </td>
+                            <td className="px-3 py-2 font-sans text-[10px]">
+                              {isExtreme ? (
+                                <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">
+                                  Extreme Divergence (|z| &gt; 2)
+                                </span>
+                              ) : isOver ? (
+                                <span className="text-emerald-400 font-medium">Over-represented</span>
+                              ) : (
+                                <span className="text-slate-400 font-medium">Under-represented</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* McNemar's Paired 2x2 Test Card */}
+            {result.mcnemar && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Binary className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>McNemar Paired Binary Transition Matrix</span>
+                  </span>
+                  <span className="text-[10px] text-muted font-mono">
+                    Discordant Odds Ratio = {result.mcnemar.oddsRatio}
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-center border border-border font-mono">
+                      <thead className="bg-surface-raised text-[10px] uppercase text-muted">
+                        <tr>
+                          <th className="p-2 border-r border-border">Before \ After</th>
+                          <th className="p-2 border-r border-border text-emerald-300">After: Positive (1)</th>
+                          <th className="p-2 text-slate-300">After: Negative (0)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        <tr>
+                          <td className="p-2 font-sans font-semibold text-emerald-300 border-r border-border bg-surface-raised/30">
+                            Before: Positive (1)
+                          </td>
+                          <td className="p-2 bg-surface text-slate-200 border-r border-border">
+                            {result.mcnemar.a} (Retained)
+                          </td>
+                          <td className="p-2 bg-amber-500/10 text-amber-400 font-bold">
+                            {result.mcnemar.b} (Lost / Dropped)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-sans font-semibold text-slate-300 border-r border-border bg-surface-raised/30">
+                            Before: Negative (0)
+                          </td>
+                          <td className="p-2 bg-emerald-500/10 text-emerald-400 font-bold border-r border-border">
+                            {result.mcnemar.c} (New Gains)
+                          </td>
+                          <td className="p-2 bg-surface text-slate-200">
+                            {result.mcnemar.d} (Unconverted)
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="p-2.5 rounded bg-background border border-border">
+                      <span className="text-[10px] text-muted block uppercase">Discordant Pairs</span>
+                      <span className="text-base font-bold text-cyan-400">
+                        {result.mcnemar.b + result.mcnemar.c}
+                      </span>
+                      <span className="text-[10px] text-muted block mt-0.5">Shifted subjects</span>
+                    </div>
+                    <div className="p-2.5 rounded bg-background border border-border">
+                      <span className="text-[10px] text-muted block uppercase">Net Transition Gain</span>
+                      <span className={`text-base font-bold ${result.mcnemar.c >= result.mcnemar.b ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {result.mcnemar.c - result.mcnemar.b > 0 ? '+' : ''}
+                        {result.mcnemar.c - result.mcnemar.b}
+                      </span>
+                      <span className="text-[10px] text-muted block mt-0.5">Gains minus losses</span>
+                    </div>
+                    <div className="p-2.5 rounded bg-background border border-border col-span-2">
+                      <span className="text-[10px] text-muted block uppercase">Edwards χ² Statistic</span>
+                      <span className="text-base font-bold text-slate-200">
+                        χ² = {result.mcnemar.chiSquare} (p = {result.mcnemar.pValue})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Exact Binomial Test Card */}
+            {result.binomial && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Binary className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Exact Binomial Trial Evaluation</span>
+                  </span>
+                  <span className="text-[10px] text-muted font-mono">
+                    Exact Clopper-Pearson 95% CI
+                  </span>
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Observed Successes (k)</span>
+                    <span className="text-lg font-bold text-cyan-300">
+                      {result.binomial.successes} / {result.binomial.trials}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Sample Proportion (p̂)</span>
+                    <span className="text-lg font-bold text-emerald-400">
+                      {(result.binomial.observedRate * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Benchmark (p₀)</span>
+                    <span className="text-lg font-bold text-slate-200">
+                      {(result.binomial.hypothesizedRate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Clopper-Pearson 95% CI</span>
+                    <span className="text-xs font-bold text-slate-300 mt-1 block">
+                      [{(result.binomial.ciLower * 100).toFixed(2)}%, {(result.binomial.ciUpper * 100).toFixed(2)}%]
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Poisson Rate Comparison Card */}
+            {result.poisson && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Poisson Event Rate Ratio &amp; Incidence Comparison</span>
+                  </span>
+                  <span className="text-[10px] text-muted font-mono">
+                    Conditional Binomial Exact p = {result.poisson.pValue}
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Cohort 1: {result.poisson.group1Name}</span>
+                    <span className="text-lg font-bold text-cyan-300">
+                      {result.poisson.rate1} / exposure
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      {result.poisson.events1} events in {result.poisson.exposure1} unit exposure
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Cohort 2: {result.poisson.group2Name}</span>
+                    <span className="text-lg font-bold text-slate-200">
+                      {result.poisson.rate2} / exposure
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      {result.poisson.events2} events in {result.poisson.exposure2} unit exposure
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Incidence Rate Ratio (IRR)</span>
+                    <span className="text-lg font-bold text-emerald-400">
+                      IRR = {result.poisson.rateRatio}
+                    </span>
+                    <span className="text-[10px] text-muted block mt-1">
+                      95% CI: [{result.poisson.ciLower}, {result.poisson.ciUpper}]
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PCA Dimension Reduction Card */}
+            {result.pca && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                    <Network className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Principal Component Analysis (PCA) Scree &amp; Eigenvectors</span>
+                  </h4>
+                  <span className="text-[10px] text-muted font-mono">
+                    {result.pca.features.length} Features Analyzed
+                  </span>
+                </div>
+
+                {/* Scree Table */}
+                <div className="overflow-x-auto border border-border/80 rounded-lg">
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-[11px] text-muted uppercase bg-surface-raised/40 border-b border-border">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Principal Component</th>
+                        <th className="px-3 py-2 font-medium font-mono">Eigenvalue (λ)</th>
+                        <th className="px-3 py-2 font-medium font-mono">% Variance Explained</th>
+                        <th className="px-3 py-2 font-medium font-mono">Cumulative % Variance</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border font-mono text-[11px]">
+                      {result.pca.components.map((comp) => (
+                        <tr key={comp.component} className="hover:bg-surface-raised/30">
+                          <td className="px-3 py-2 font-sans font-semibold text-cyan-300">{comp.component}</td>
+                          <td className="px-3 py-2 text-slate-200">{comp.eigenvalue}</td>
+                          <td className="px-3 py-2 text-emerald-400 font-bold">{(comp.varianceExplained * 100).toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-slate-300">{(comp.cumulativeVariance * 100).toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Feature Loadings Matrix */}
+                <div>
+                  <h5 className="text-[11px] font-semibold text-slate-300 uppercase mb-2">
+                    Component Loadings Matrix (Feature Correlation with Principal Axes)
+                  </h5>
+                  <div className="overflow-x-auto border border-border/80 rounded-lg">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-[11px] text-muted uppercase bg-surface-raised/40 border-b border-border font-medium">
+                        <tr>
+                          <th className="px-3 py-2">Feature</th>
+                          <th className="px-3 py-2 font-mono">PC1 Loading</th>
+                          <th className="px-3 py-2 font-mono">PC2 Loading</th>
+                          {result.pca.features.length > 2 && <th className="px-3 py-2 font-mono">PC3 Loading</th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border font-mono text-[11px]">
+                        {result.pca.features.map((feat) => {
+                          const loads = result.pca!.loadings[feat] || [0, 0, 0];
+                          return (
+                            <tr key={feat} className="hover:bg-surface-raised/30">
+                              <td className="px-3 py-2 font-sans font-medium text-slate-200">{feat}</td>
+                              <td className="px-3 py-2 text-cyan-300 font-bold">{loads[0]}</td>
+                              <td className="px-3 py-2 text-slate-300">{loads[1] ?? '—'}</td>
+                              {result.pca!.features.length > 2 && (
+                                <td className="px-3 py-2 text-slate-400">{loads[2] ?? '—'}</td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dixon's Q-Test Card */}
+            {result.dixonQ && (
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Dixon's Q-Test for Extreme Value Outlier Detection</span>
+                  </h4>
+                  <span className="text-[10px] text-muted font-mono">
+                    Rorabacher Critical Values (95% Confidence)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Suspect Value ({result.dixonQ.selectedTail})</span>
+                    <span className="text-lg font-bold text-amber-300">
+                      {result.dixonQ.selectedTail === 'max' ? result.dixonQ.suspectMax : result.dixonQ.suspectMin}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Calculated Q (Q_calc)</span>
+                    <span className="text-lg font-bold text-cyan-300">
+                      {result.dixonQ.qCalculated}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Critical Q (Q_crit, n={result.dixonQ.sampleSize})</span>
+                    <span className="text-lg font-bold text-slate-200">
+                      {result.dixonQ.qCritical}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background border border-border">
+                    <span className="text-[10px] text-muted block uppercase">Outlier Rejection</span>
+                    <span className={`text-base font-bold block mt-0.5 ${
+                      result.dixonQ.isOutlierRejected ? 'text-rose-400' : 'text-emerald-400'
+                    }`}>
+                      {result.dixonQ.isOutlierRejected ? 'Reject (Outlier)' : 'Retain (Valid)'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

@@ -230,7 +230,134 @@ export function generateFullHypothesisMarkdown(
     lines.push(``);
   }
 
-  // 7. Distribution Summary if available
+  // 7. Two-Way Factorial ANOVA Summary Table & Cell Means
+  if (result.twoWayAnova) {
+    lines.push(`### 📐 Two-Way Factorial ANOVA Partition of Variance`);
+    lines.push(``);
+    lines.push(`| Source of Variation | Sum of Squares ($SS$) | $df$ | Mean Square ($MS$) | $F$-Ratio | $p$-value | Partial $\\eta_p^2$ | Significant |`);
+    lines.push(`| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |`);
+    const fa = result.twoWayAnova.factorAEffects;
+    const fb = result.twoWayAnova.factorBEffects;
+    const fab = result.twoWayAnova.interactionEffects;
+    const err = result.twoWayAnova.errorEffects;
+    const tot = result.twoWayAnova.totalEffects;
+    lines.push(`| **Factor A (${result.twoWayAnova.factorAName})** | \`${fa.ss}\` | ${fa.df} | ${fa.ms} | **${fa.fStat}** | ${fa.pVal} | **${fa.partialEtaSq}** | ${fa.isSignificant ? 'Yes' : 'No'} |`);
+    lines.push(`| **Factor B (${result.twoWayAnova.factorBName})** | \`${fb.ss}\` | ${fb.df} | ${fb.ms} | **${fb.fStat}** | ${fb.pVal} | **${fb.partialEtaSq}** | ${fb.isSignificant ? 'Yes' : 'No'} |`);
+    lines.push(`| **Interaction (${fa.source})** | \`${fab.ss}\` | ${fab.df} | ${fab.ms} | **${fab.fStat}** | ${fab.pVal} | **${fab.partialEtaSq}** | ${fab.isSignificant ? '**Yes**' : 'No'} |`);
+    lines.push(`| **Within-Cell Error** | \`${err.ss}\` | ${err.df} | ${err.ms} | — | — | — | — |`);
+    lines.push(`| **Total Variance** | \`${tot.ss}\` | ${tot.df} | — | — | — | — | — |`);
+    lines.push(``);
+
+    lines.push(`#### Sub-Group Cell Means Matrix`);
+    lines.push(``);
+    lines.push(`| ${result.twoWayAnova.factorAName} | ${result.twoWayAnova.factorBName} | Count ($n$) | Cell Mean ($\\bar{y}$) | Cell Std Dev ($s$) |`);
+    lines.push(`| :--- | :--- | :--- | :--- | :--- |`);
+    result.twoWayAnova.cellMeans.forEach((cm) => {
+      lines.push(`| **${cm.factorA}** | ${cm.factorB} | ${cm.count} | **${cm.mean}** | ${cm.stdDev} |`);
+    });
+    lines.push(``);
+  }
+
+  // 8. Two-Sample F-Test for Equality of Variances
+  if (result.fTestVariance) {
+    lines.push(`### ⚖️ Two-Sample F-Test for Equality of Variances`);
+    lines.push(``);
+    lines.push(`- **Cohort 1 (${result.fTestVariance.group1Name}):** $s_1^2 = ${result.fTestVariance.var1}$, $s_1 = ${result.fTestVariance.sd1}$ ($n = ${result.fTestVariance.n1}$`);
+    lines.push(`- **Cohort 2 (${result.fTestVariance.group2Name}):** $s_2^2 = ${result.fTestVariance.var2}$, $s_2 = ${result.fTestVariance.sd2}$ ($n = ${result.fTestVariance.n2}$`);
+    lines.push(`- **Variance Ratio ($F$):** \`${result.fTestVariance.fRatio}\` ($p$-value = \`${result.fTestVariance.pValue}\`)`);
+    lines.push(`- **95% Confidence Interval for Variance Ratio:** [${result.fTestVariance.ciLower}, ${result.fTestVariance.ciUpper}]`);
+    lines.push(`- **Homoscedasticity Assessment:** ${result.fTestVariance.isEqualVariance ? 'Equal Variances Confirmed (Student t-test valid)' : 'Unequal Variances Detected (Welch t-test required)'}`);
+    lines.push(``);
+  }
+
+  // 9. Chi-Square Goodness-of-Fit
+  if (result.chiSquareGof) {
+    lines.push(`### 🎲 Chi-Square Goodness-of-Fit Breakdown`);
+    lines.push(``);
+    lines.push(`- **Chi-Square ($\\chi^2$):** \`${result.chiSquareGof.chiSquare}\``);
+    lines.push(`- **Degrees of Freedom ($df$):** ${result.chiSquareGof.df}`);
+    lines.push(`- **$p$-value:** \`${result.chiSquareGof.pValue}\``);
+    lines.push(``);
+    lines.push(`| Category | Observed ($O$) | Expected ($E$) | Residual ($O - E$) | Standardized Residual |`);
+    lines.push(`| :--- | :--- | :--- | :--- | :--- |`);
+    result.chiSquareGof.categories.forEach((c) => {
+      lines.push(`| **${c.category}** | \`${c.observed}\` | ${c.expected} | ${c.residual > 0 ? '+' : ''}${c.residual} | ${c.stdResidual} |`);
+    });
+    lines.push(``);
+  }
+
+  // 10. McNemar's Test for Paired Binary Data
+  if (result.mcnemar) {
+    lines.push(`### 🔄 McNemar's Test for Paired Binary Transitions`);
+    lines.push(``);
+    lines.push(`- **Edwards Continuity-Corrected $\\chi^2$:** \`${result.mcnemar.chiSquare}\` ($p$-value = \`${result.mcnemar.pValue}\`)`);
+    lines.push(`- **Discordant Odds Ratio:** \`${result.mcnemar.oddsRatio}\``);
+    lines.push(`- **Discordant Transitions:** +${result.mcnemar.c} new conversions vs -${result.mcnemar.b} lost dropouts`);
+    lines.push(``);
+    lines.push(`| Before \\ After | After: Positive (1) | After: Negative (0) |`);
+    lines.push(`| :--- | :--- | :--- |`);
+    lines.push(`| **Before: Positive (1)** | ${result.mcnemar.a} (Retained) | ${result.mcnemar.b} (Dropped) |`);
+    lines.push(`| **Before: Negative (0)** | ${result.mcnemar.c} (New Gains) | ${result.mcnemar.d} (Unconverted) |`);
+    lines.push(``);
+  }
+
+  // 11. Exact Binomial Test
+  if (result.exactBinomial || result.binomial) {
+    const bin = result.exactBinomial || result.binomial!;
+    lines.push(`### 🎯 Exact Binomial Trial Evaluation`);
+    lines.push(``);
+    lines.push(`- **Observed Successes ($k$):** ${bin.successes} / ${bin.trials} trials (${(bin.observedRate * 100).toFixed(2)}%)`);
+    lines.push(`- **Hypothesized Benchmark ($p_0$):** ${(bin.hypothesizedRate * 100).toFixed(1)}%`);
+    lines.push(`- **Exact Two-Tailed $p$-value:** \`${bin.pValue}\``);
+    lines.push(`- **Exact Clopper-Pearson 95% CI:** [${(bin.ciLower * 100).toFixed(2)}%, ${(bin.ciUpper * 100).toFixed(2)}%]`);
+    lines.push(``);
+  }
+
+  // 12. Poisson Rate Comparison Test
+  if (result.poissonTest || result.poisson) {
+    const poi = result.poissonTest || result.poisson!;
+    lines.push(`### ⏱️ Poisson Rate Comparison & Incident Rate Ratio`);
+    lines.push(``);
+    lines.push(`- **Cohort 1 (${poi.group1Name}):** ${poi.rate1}/exposure (${poi.events1} events in ${poi.exposure1} unit exposure)`);
+    lines.push(`- **Cohort 2 (${poi.group2Name}):** ${poi.rate2}/exposure (${poi.events2} events in ${poi.exposure2} unit exposure)`);
+    lines.push(`- **Incidence Rate Ratio (IRR):** \`${poi.rateRatio}\` ($p$-value = \`${poi.pValue}\`)`);
+    lines.push(`- **Wald 95% Confidence Interval for IRR:** [${poi.ciLower}, ${poi.ciUpper}]`);
+    lines.push(``);
+  }
+
+  // 13. Principal Component Analysis (PCA)
+  if (result.pca) {
+    lines.push(`### 🌐 Principal Component Analysis (PCA)`);
+    lines.push(``);
+    lines.push(`| Principal Component | Eigenvalue ($\\lambda$) | % Variance Explained | Cumulative % Variance |`);
+    lines.push(`| :--- | :--- | :--- | :--- |`);
+    result.pca.components.forEach((c) => {
+      lines.push(`| **${c.component}** | \`${c.eigenvalue}\` | ${(c.varianceExplained * 100).toFixed(1)}% | ${(c.cumulativeVariance * 100).toFixed(1)}% |`);
+    });
+    lines.push(``);
+    lines.push(`#### Component Loadings Matrix`);
+    lines.push(``);
+    lines.push(`| Feature | PC1 Loading | PC2 Loading | PC3 Loading |`);
+    lines.push(`| :--- | :--- | :--- | :--- |`);
+    result.pca.features.forEach((f) => {
+      const loads = result.pca!.loadings[f] || [0, 0, 0];
+      lines.push(`| **${f}** | ${loads[0]} | ${loads[1] ?? '—'} | ${loads[2] ?? '—'} |`);
+    });
+    lines.push(``);
+  }
+
+  // 14. Dixon's Q-Test for Outlier Detection
+  if (result.dixonQ) {
+    lines.push(`### 🛡️ Dixon's Q-Test for Outlier Detection ($n \\le 30$)`);
+    lines.push(``);
+    lines.push(`- **Suspect Outlier Value (${result.dixonQ.selectedTail}):** \`${result.dixonQ.selectedTail === 'max' ? result.dixonQ.suspectMax : result.dixonQ.suspectMin}\``);
+    lines.push(`- **Calculated $Q$ ($Q_{calc}$):** \`${result.dixonQ.qCalculated}\``);
+    lines.push(`- **Critical $Q$ ($Q_{crit}$ at 95% Confidence, $n=${result.dixonQ.sampleSize}$):** \`${result.dixonQ.qCritical}\``);
+    lines.push(`- **Outlier Rejection Verdict:** ${result.dixonQ.isOutlierRejected ? '**REJECT (Confirmed Outlier at 95% Confidence)**' : 'RETAIN (Consistent with normal variation)'}`);
+    lines.push(``);
+  }
+
+  // 15. Distribution Summary if available
   if (targetNumericData && targetNumericData.length >= 2) {
     const sorted = [...targetNumericData].sort((a, b) => a - b);
     const min = sorted[0];

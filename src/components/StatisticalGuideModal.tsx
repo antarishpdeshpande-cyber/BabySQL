@@ -460,6 +460,172 @@ const GUIDE_ITEMS: GuideItem[] = [
       'Centroids: Mean profile of each cluster for business persona labeling.',
     ],
   },
+  {
+    id: 'two_way_anova',
+    name: 'Two-Way Factorial ANOVA (A × B + Interaction)',
+    category: 'Comparing Means & Variance',
+    question: 'How do two factors (e.g. Region and Channel) interact to influence sales or performance?',
+    useWhen: [
+      'Simultaneously evaluating main effects of two categorical factors and their interaction on a continuous metric.',
+      'Checking if the effectiveness of Factor A depends on the specific level of Factor B.',
+    ],
+    businessExample:
+      'Testing whether a promotional discount produces higher sales in Urban vs Suburban store locations (Promotion × Location interaction).',
+    dataRequirements: '1 Continuous Dependent Variable (Y) + 2 Categorical Factors (Factor A, Factor B).',
+    assumptions: [
+      'Independent observations across factorial cells.',
+      'Approximate normality of cell residuals.',
+      'Homogeneity of variance across cells.',
+    ],
+    howToInterpret: [
+      'Interaction p < 0.05: The effect of Factor A depends on Factor B. Main effects cannot be interpreted in isolation.',
+      'Partial Eta-Squared (ηₚ²): Proportion of unique variance explained by each factor and their interaction.',
+    ],
+  },
+  {
+    id: 'f_test_variance',
+    name: 'Two-Sample F-Test for Equality of Variances',
+    category: 'Comparing Means & Variance',
+    question: 'Do two cohorts or production processes have equal variance (homoscedasticity)?',
+    useWhen: [
+      'Testing equality of population variances (σ₁² = σ₂²) prior to running Student’s t-test.',
+      'Evaluating consistency, precision, or volatility between two machines, suppliers, or algorithms.',
+    ],
+    businessExample:
+      'Testing whether Supplier A provides more consistent battery cell voltages than Supplier B.',
+    dataRequirements: '1 Continuous Numeric Metric + 1 Categorical Grouping Column (2 cohorts).',
+    assumptions: [
+      'Independent samples.',
+      'Both populations are normally distributed.',
+    ],
+    howToInterpret: [
+      'p < 0.05: Reject H₀. Cohorts have statistically significantly different variances.',
+      'F-ratio: Ratio of sample variances with Fisher F confidence interval.',
+    ],
+  },
+  {
+    id: 'chi_square_gof',
+    name: 'Chi-Square Goodness-of-Fit Test',
+    category: 'Categorical & Proportions',
+    question: 'Do observed category frequencies conform to an expected uniform or theoretical distribution?',
+    useWhen: [
+      'Testing whether categorical choices deviate from an even distribution or known industry benchmark.',
+      'Fraud detection, digit preference testing, and demographic sampling verification.',
+    ],
+    businessExample:
+      'Testing whether server requests or product returns are uniformly distributed across days of the week.',
+    dataRequirements: '1 Categorical Column (discrete frequencies).',
+    assumptions: [
+      'Expected count in each category ≥ 5.',
+      'Mutually exclusive categorical counts.',
+    ],
+    howToInterpret: [
+      'p < 0.05: Reject H₀. Observed frequencies deviate significantly from expected distribution.',
+      'Standardized Residuals (|z| > 2): Identify categories with extreme deviations.',
+    ],
+  },
+  {
+    id: 'mcnemar_test',
+    name: "McNemar's Paired Test (Before vs After Conversion)",
+    category: 'Categorical & Proportions',
+    question: 'Did an intervention significantly shift binary conversion rates in a paired subject panel?',
+    useWhen: [
+      'Testing paired binary responses (e.g. converted vs unconverted) before and after an intervention on the exact same subjects.',
+      'Analyzing user migration, brand preference switching, or diagnostic test agreement.',
+    ],
+    businessExample:
+      'Evaluating whether users who received personalized product recommendations upgraded to premium subscriptions.',
+    dataRequirements: '2 Paired Binary Columns (Before status and After status).',
+    assumptions: [
+      'Paired binary measurements from identical subjects.',
+      'Edwards continuity correction applied for accurate small-sample chi-square approximation.',
+    ],
+    howToInterpret: [
+      'p < 0.05: Statistically significant net change in conversion probability.',
+      'Discordant Odds Ratio: Ratio of downward switches to upward switches (b / c).',
+    ],
+  },
+  {
+    id: 'binomial_test',
+    name: 'Exact Binomial Test (Sign Test)',
+    category: 'Categorical & Proportions',
+    question: 'Does a small-sample success rate statistically differ from a benchmark probability?',
+    useWhen: [
+      'Evaluating success proportions when sample size is too small for normal Z-approximations (n < 30).',
+      'Non-parametric exact sign test for paired differences.',
+    ],
+    businessExample:
+      'In a pilot test of 16 customer evaluations, testing if 13 approvals significantly exceed the 50% chance benchmark.',
+    dataRequirements: '1 Binary Column (success/failure) + Benchmark probability p₀.',
+    assumptions: [
+      'Independent Bernoulli trials with identical success probability.',
+    ],
+    howToInterpret: [
+      'Exact p-value: Sum of exact binomial probability mass for outcomes as or more extreme than observed.',
+      'Clopper-Pearson 95% CI: Inverted exact Beta quantile interval covering the true success rate.',
+    ],
+  },
+  {
+    id: 'poisson_test',
+    name: 'Poisson Rate Comparison Test (Incidence Rates)',
+    category: 'Categorical & Proportions',
+    question: 'Do event incidence rates per unit exposure differ between two cohorts?',
+    useWhen: [
+      'Comparing occurrence rates of counts per exposure unit (e.g. bugs per 1,000 lines of code, churn per 10,000 hours).',
+      'Quality control, reliability engineering, and epidemiological comparisons.',
+    ],
+    businessExample:
+      'Comparing server crash rates per million requests between microservice Architecture A and Architecture B.',
+    dataRequirements: '1 Event Count column + 1 Categorical Grouping column + Optional Exposure column.',
+    assumptions: [
+      'Events occur independently with constant average Poisson rate λ.',
+    ],
+    howToInterpret: [
+      'Incidence Rate Ratio (IRR): Relative incident rate between cohorts.',
+      'Exact conditional binomial test p-value and Wald 95% confidence interval.',
+    ],
+  },
+  {
+    id: 'pca',
+    name: 'Principal Component Analysis (PCA)',
+    category: 'Multivariate & Dimensionality',
+    question: 'How do we compress multiple correlated metrics into principal composite components?',
+    useWhen: [
+      'Dimension reduction and multi-collinearity diagnosis across 2 or more numeric features.',
+      'Summarizing complex financial or telemetry matrices into 2D projections.',
+    ],
+    businessExample:
+      'Compressing 8 vehicle performance telemetry metrics (torque, rpm, temperature, battery drain) into 2 leading health components.',
+    dataRequirements: '2 or more Continuous Numeric columns.',
+    assumptions: [
+      'Continuous metric features standardized to zero mean and unit variance.',
+    ],
+    howToInterpret: [
+      'Eigenvalues (λ): Variance captured by each principal axis (λ > 1.0 indicates informative component).',
+      'Variance Explained %: Cumulative percentage of information preserved in lower dimensions.',
+      'Loadings Matrix: Feature weights defining each principal component.',
+    ],
+  },
+  {
+    id: 'dixon_q_test',
+    name: "Dixon's Q-Test (Outlier Detection for n ≤ 30)",
+    category: 'Outliers & Diagnostics',
+    question: 'Is an extreme minimum or maximum observation a statistically verifiable outlier?',
+    useWhen: [
+      'Evaluating suspect extreme values in small sample datasets (3 ≤ n ≤ 30).',
+      'Laboratory assay calibration, benchmark outlier screening, and sensor outlier rejection.',
+    ],
+    businessExample:
+      'Testing whether a 950 ms network latency spike in a 15-request sample is an outlier that should be excluded.',
+    dataRequirements: '1 Continuous Numeric column (3 to 30 valid observations).',
+    assumptions: [
+      'Underlying population is approximately normally distributed.',
+    ],
+    howToInterpret: [
+      'Q_calc > Q_crit (at 95% confidence): Reject observation as a statistically confirmed outlier.',
+      'Q_calc ≤ Q_crit: Retain observation; consistent with expected small-sample random dispersion.',
+    ],
+  },
 ];
 
 export const StatisticalGuideModal: React.FC<StatisticalGuideModalProps> = ({
@@ -777,6 +943,70 @@ export const StatisticalGuideModal: React.FC<StatisticalGuideModalProps> = ({
                         model: 'K-Means Cluster Analysis',
                         testId: 'kmeans_clustering',
                         badge: 'Cluster Analysis',
+                      },
+                      {
+                        goal: 'Test 2 Factors & Interaction (A × B)',
+                        y: 'Continuous (Revenue, Sales)',
+                        x: '2 Categorical Factors (Factor A, Factor B)',
+                        model: 'Two-Way Factorial ANOVA',
+                        testId: 'two_way_anova',
+                        badge: '2-Factor ANOVA',
+                      },
+                      {
+                        goal: 'Compare Variances (Homoscedasticity)',
+                        y: 'Continuous Metric',
+                        x: '2 Independent Groups',
+                        model: 'Two-Sample F-Test for Variances',
+                        testId: 'f_test_variance',
+                        badge: 'Variance Ratio',
+                      },
+                      {
+                        goal: 'Test Category Frequencies vs Expected',
+                        y: 'Discrete Categories',
+                        x: 'Single Categorical Distribution',
+                        model: 'Chi-Square Goodness-of-Fit',
+                        testId: 'chi_square_gof',
+                        badge: 'Goodness-of-Fit',
+                      },
+                      {
+                        goal: 'Paired Binary Before vs After Shift',
+                        y: 'Binary Status (Converted 1/0)',
+                        x: 'Paired Pre- and Post-Measurements',
+                        model: "McNemar's Paired Chi-Square",
+                        testId: 'mcnemar_test',
+                        badge: 'Paired Binary',
+                      },
+                      {
+                        goal: 'Small-Sample Benchmark Test',
+                        y: 'Binary Bernoulli Trials (n < 30)',
+                        x: 'Benchmark Success Probability (p₀)',
+                        model: 'Exact Binomial Test (Sign Test)',
+                        testId: 'binomial_test',
+                        badge: 'Exact Binomial',
+                      },
+                      {
+                        goal: 'Compare Incidence Rates per Exposure',
+                        y: 'Event Occurrence Counts',
+                        x: '2 Cohorts with Unit Exposure Time',
+                        model: 'Poisson Rate Comparison Test',
+                        testId: 'poisson_test',
+                        badge: 'Poisson Rates',
+                      },
+                      {
+                        goal: 'Dimension Reduction & Multi-Collinearity',
+                        y: 'Multivariate Continuous Matrix',
+                        x: '2+ Continuous Feature Variables',
+                        model: 'Principal Component Analysis (PCA)',
+                        testId: 'pca',
+                        badge: 'PCA Reduction',
+                      },
+                      {
+                        goal: 'Detect Outliers in Small Datasets (n ≤ 30)',
+                        y: 'Continuous Metric (3 ≤ n ≤ 30)',
+                        x: 'Suspect Minimum or Maximum Reading',
+                        model: "Dixon's Q-Test for Outliers",
+                        testId: 'dixon_q_test',
+                        badge: 'Outlier Detection',
                       },
                     ].map((row, idx) => (
                       <tr key={idx} className="hover:bg-surface-raised/40 transition-colors">
