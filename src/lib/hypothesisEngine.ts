@@ -157,18 +157,22 @@ export function computeDiagnostics(values: number[]): AssumptionDiagnostics {
     };
   }
 
+  let m2 = 0;
   let m3 = 0;
   let m4 = 0;
   for (const v of values) {
     const d = v - m;
+    m2 += Math.pow(d, 2);
     m3 += Math.pow(d, 3);
     m4 += Math.pow(d, 4);
   }
+  m2 /= n;
   m3 /= n;
   m4 /= n;
 
-  const skewness = Number((m3 / Math.pow(s, 3)).toFixed(3));
-  const kurtosis = Number((m4 / Math.pow(s, 4) - 3).toFixed(3));
+  const popS = Math.sqrt(m2);
+  const skewness = popS > 0 ? Number((m3 / Math.pow(popS, 3)).toFixed(3)) : 0;
+  const kurtosis = popS > 0 ? Number((m4 / Math.pow(popS, 4) - 3).toFixed(3)) : 0;
 
   // Jarque-Bera statistic: JB = (n/6) * (S^2 + K^2 / 4)
   const jb = Number(((n / 6) * (Math.pow(skewness, 2) + Math.pow(kurtosis, 2) / 4)).toFixed(3));
@@ -970,48 +974,34 @@ export function runMannWhitneyUTest(
   }
 
   // Combine and rank
-  interface RankedItem {
-    val: number;
-    group: number;
-    rank: number;
-  }
-
-  const combined: RankedItem[] = [
-    ...g1Values.map((v) => ({ val: v, group: 1, rank: 0 })),
-    ...g2Values.map((v) => ({ val: v, group: 2, rank: 0 })),
+  const combined = [
+    ...g1Values.map((v) => ({ val: v, group: 1 })),
+    ...g2Values.map((v) => ({ val: v, group: 2 })),
   ];
 
-  combined.sort((a, b) => a.val - b.val);
-
-  // Assign average ranks for ties
-  let i = 0;
-  while (i < combined.length) {
-    let j = i;
-    while (j < combined.length - 1 && combined[j + 1].val === combined[i].val) {
-      j++;
-    }
-    const avgRank = (i + 1 + (j + 1)) / 2;
-    for (let k = i; k <= j; k++) {
-      combined[k].rank = avgRank;
-    }
-    i = j + 1;
-  }
+  const { ranks, ties } = computeRanksWithTies(combined.map((c) => c.val));
 
   let r1 = 0;
   let r2 = 0;
-  for (const item of combined) {
-    if (item.group === 1) r1 += item.rank;
-    else r2 += item.rank;
+  for (let i = 0; i < combined.length; i++) {
+    if (combined[i].group === 1) r1 += ranks[i];
+    else r2 += ranks[i];
   }
 
   const u1 = r1 - (n1 * (n1 + 1)) / 2;
   const u2 = r2 - (n2 * (n2 + 1)) / 2;
   const u = Math.min(u1, u2);
 
-  // Large-sample normal approximation for U
+  // Large-sample normal approximation for U with tie correction
   const meanU = (n1 * n2) / 2;
-  const varU = (n1 * n2 * (n1 + n2 + 1)) / 12;
-  const stdU = Math.sqrt(varU);
+  const n = n1 + n2;
+  let tieSum = 0;
+  for (const t of ties) {
+    tieSum += (t * t * t - t);
+  }
+
+  const varU = (n1 * n2 / 12) * ((n + 1) - tieSum / (n * (n - 1)));
+  const stdU = Math.sqrt(Math.max(0, varU));
   const z = stdU > 0 ? (u - meanU) / stdU : 0;
   const pVal = Math.max(0, Math.min(1, 2 * (1 - jStat.normal.cdf(Math.abs(z), 0, 1))));
 
