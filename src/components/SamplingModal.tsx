@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TableMeta } from '../types';
 import {
   generateSampleTable,
   generateDistributionSampleTable,
+  getStratifiedBreakdown,
   SamplingConfig,
   DistributionSamplingConfig,
+  StratumAllocationInfo,
 } from '../lib/samplingEngine';
 import {
   Dice5,
@@ -17,6 +19,8 @@ import {
   TrendingUp,
   Sparkles,
   BarChart2,
+  CheckCircle2,
+  Table,
 } from 'lucide-react';
 
 interface SamplingModalProps {
@@ -42,6 +46,10 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
   const [count, setCount] = useState<number>(50);
   const [percentage, setPercentage] = useState<number>(20);
   const [stratifyColumn, setStratifyColumn] = useState<string>('');
+  const [stratifiedAllocation, setStratifiedAllocation] = useState<'proportional' | 'equal'>('proportional');
+  const [stratifiedSizeMode, setStratifiedSizeMode] = useState<'count' | 'pct'>('count');
+  const [stratifiedTotalCount, setStratifiedTotalCount] = useState<number>(100);
+  const [stratifiedPercentage, setStratifiedPercentage] = useState<number>(20);
   const [countPerStratum, setCountPerStratum] = useState<number>(15);
   const [stepK, setStepK] = useState<number>(5);
   const [targetTable, setTargetTable] = useState<string>('');
@@ -77,6 +85,28 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
     setSimTargetTable(`sim_${distType}_${distN}`);
   }, [distType, distN]);
 
+  // Compute live stratum allocation breakdown preview
+  const stratumBreakdown = useMemo(() => {
+    if (!isOpen || method !== 'stratified' || !sourceTable || !stratifyColumn) {
+      return [];
+    }
+    const target = stratifiedAllocation === 'proportional'
+      ? (stratifiedSizeMode === 'count' ? stratifiedTotalCount : stratifiedPercentage)
+      : countPerStratum;
+    const isPct = stratifiedAllocation === 'proportional' && stratifiedSizeMode === 'pct';
+    return getStratifiedBreakdown(sourceTable, stratifyColumn, stratifiedAllocation, target, isPct);
+  }, [
+    isOpen,
+    method,
+    sourceTable,
+    stratifyColumn,
+    stratifiedAllocation,
+    stratifiedSizeMode,
+    stratifiedTotalCount,
+    stratifiedPercentage,
+    countPerStratum,
+  ]);
+
   if (!isOpen) return null;
 
   const currentMeta = tables.find((t) => t.name === sourceTable);
@@ -96,6 +126,9 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
           count,
           percentage,
           stratifyColumn,
+          stratifiedAllocation,
+          stratifiedTotalCount: stratifiedSizeMode === 'count' ? stratifiedTotalCount : undefined,
+          stratifiedPercentage: stratifiedSizeMode === 'pct' ? stratifiedPercentage : undefined,
           countPerStratum,
           stepK,
         });
@@ -119,7 +152,7 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-surface border border-border rounded-xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-surface border border-border rounded-xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Header */}
         <div className="px-5 py-3.5 border-b border-border flex items-center justify-between bg-surface-raised/40">
           <div className="flex items-center gap-2">
@@ -317,10 +350,10 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
                 )}
 
                 {method === 'stratified' && (
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     <div>
                       <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                        Stratify By Category
+                        Stratify By Categorical Column
                       </label>
                       <select
                         value={stratifyColumn}
@@ -334,18 +367,174 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
                         ))}
                       </select>
                     </div>
+
+                    {/* Allocation Mode Selector */}
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                        Target Samples Per Group
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1.5">
+                        Stratum Allocation Strategy
                       </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={countPerStratum}
-                        onChange={(e) => setCountPerStratum(Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-surface border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
-                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setStratifiedAllocation('proportional')}
+                          className={`p-2 rounded border text-left transition-all ${
+                            stratifiedAllocation === 'proportional'
+                              ? 'bg-primary/20 border-primary text-cyan-300'
+                              : 'bg-surface border-border text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <div className="font-semibold text-xs text-slate-200 flex items-center justify-between">
+                            <span>Proportional</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
+                              Population Ratio
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-muted mt-0.5">
+                            Sample mirrors exact population weights (wₕ = Nₕ / N)
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setStratifiedAllocation('equal')}
+                          className={`p-2 rounded border text-left transition-all ${
+                            stratifiedAllocation === 'equal'
+                              ? 'bg-primary/20 border-primary text-cyan-300'
+                              : 'bg-surface border-border text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <div className="font-semibold text-xs text-slate-200">Equal Rows</div>
+                          <div className="text-[10px] text-muted mt-0.5">
+                            Fixed count per group regardless of size
+                          </div>
+                        </button>
+                      </div>
                     </div>
+
+                    {stratifiedAllocation === 'proportional' ? (
+                      <div className="space-y-2 bg-surface/60 p-2.5 rounded border border-border/70">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-medium text-slate-300">
+                            Target Total Sample Size
+                          </label>
+                          <div className="flex items-center gap-1 bg-background p-0.5 rounded border border-border text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => setStratifiedSizeMode('count')}
+                              className={`px-2 py-0.5 rounded transition-colors ${
+                                stratifiedSizeMode === 'count'
+                                  ? 'bg-primary/20 text-cyan-300 font-medium'
+                                  : 'text-muted hover:text-slate-200'
+                              }`}
+                            >
+                              Fixed N
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setStratifiedSizeMode('pct')}
+                              className={`px-2 py-0.5 rounded transition-colors ${
+                                stratifiedSizeMode === 'pct'
+                                  ? 'bg-primary/20 text-cyan-300 font-medium'
+                                  : 'text-muted hover:text-slate-200'
+                              }`}
+                            >
+                              % of Pop
+                            </button>
+                          </div>
+                        </div>
+
+                        {stratifiedSizeMode === 'count' ? (
+                          <input
+                            type="number"
+                            min={1}
+                            max={currentMeta?.rowCount || 100000}
+                            value={stratifiedTotalCount}
+                            onChange={(e) => setStratifiedTotalCount(Math.max(1, Number(e.target.value)))}
+                            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
+                          />
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-muted">Percentage of dataset:</span>
+                              <span className="font-mono text-cyan-400 font-bold">{stratifiedPercentage}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={1}
+                              max={99}
+                              value={stratifiedPercentage}
+                              onChange={(e) => setStratifiedPercentage(Number(e.target.value))}
+                              className="w-full accent-cyan-400 cursor-pointer"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                          Target Samples Per Group
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={countPerStratum}
+                          onChange={(e) => setCountPerStratum(Math.max(1, Number(e.target.value)))}
+                          className="w-full bg-surface border border-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    )}
+
+                    {/* Live Stratum Allocation Preview Breakdown */}
+                    {stratumBreakdown.length > 0 && (
+                      <div className="mt-2 border border-border/80 rounded-lg overflow-hidden bg-background">
+                        <div className="px-2.5 py-1.5 bg-surface-raised/60 border-b border-border/80 flex items-center justify-between text-[11px]">
+                          <span className="font-medium text-slate-300 flex items-center gap-1.5">
+                            <Table className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Stratum Allocation Breakdown</span>
+                          </span>
+                          <span className="text-[10px] text-cyan-400 font-mono">
+                            Total: {stratumBreakdown.reduce((a, b) => a + b.sampleSize, 0)} / {currentMeta?.rowCount || 0} rows
+                          </span>
+                        </div>
+                        <div className="max-h-36 overflow-y-auto">
+                          <table className="w-full text-left text-[10px]">
+                            <thead className="bg-surface/50 text-slate-400 sticky top-0 border-b border-border/50">
+                              <tr>
+                                <th className="py-1 px-2.5 font-medium">Stratum</th>
+                                <th className="py-1 px-2 text-right font-medium">Pop (Nₕ)</th>
+                                <th className="py-1 px-2 text-right font-medium">Pop %</th>
+                                <th className="py-1 px-2 text-right font-medium">Sample (nₕ)</th>
+                                <th className="py-1 px-2.5 text-right font-medium">Sample %</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/40 font-mono">
+                              {stratumBreakdown.map((row) => (
+                                <tr key={row.stratum} className="hover:bg-surface-raised/30 transition-colors">
+                                  <td className="py-1 px-2.5 text-slate-200 font-sans truncate max-w-[120px]" title={row.stratum}>
+                                    {row.stratum}
+                                  </td>
+                                  <td className="py-1 px-2 text-right text-slate-400">{row.populationSize}</td>
+                                  <td className="py-1 px-2 text-right text-slate-400">
+                                    {(row.populationShare * 100).toFixed(1)}%
+                                  </td>
+                                  <td className="py-1 px-2 text-right text-cyan-400 font-bold">{row.sampleSize}</td>
+                                  <td className="py-1 px-2.5 text-right text-cyan-300 font-semibold">
+                                    {(row.sampleShare * 100).toFixed(1)}%
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="px-2.5 py-1 bg-surface-raised/20 border-t border-border/50 text-[9.5px] text-muted flex items-center justify-between">
+                          <span>
+                            {stratifiedAllocation === 'proportional'
+                              ? 'Hamilton largest-remainder quota method ensures exact population proportionality.'
+                              : 'Equal allocation guarantees identical representation per group.'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

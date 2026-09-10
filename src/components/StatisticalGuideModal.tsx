@@ -144,6 +144,33 @@ const GUIDE_ITEMS: GuideItem[] = [
       'p < 0.05: At least one group differs significantly from the others.',
       'F-statistic: Ratio of between-group variance to within-group natural variation.',
       'Eta-squared (η²): Percentage of total variance explained by group membership.',
+      'Tukey HSD Post-Hoc: Pairwise Studentized range tests (q) pinpoint which group pairs drive significance.',
+    ],
+  },
+  {
+    id: 'cronbach_alpha',
+    name: "Cronbach's Alpha (Survey Scale Reliability)",
+    category: 'Predictive & Multivariate',
+    question: 'Do the questions in our 5-point CSAT, NPS, or engagement survey measure a coherent underlying construct?',
+    useWhen: [
+      'Validating multi-item Likert rating scales, psychological instruments, or composite survey indices.',
+      'Checking if items share sufficient true variance before averaging them into a composite KPI.',
+      'Identifying redundant, conflicting, or reverse-coded survey questions using Item-Total statistics.',
+    ],
+    businessExample:
+      'Evaluating internal consistency of a 6-question employee satisfaction questionnaire (Scale α ≥ 0.80).',
+    dataRequirements: '2 or more numeric Likert/survey rating columns (respondents as rows).',
+    assumptions: [
+      'Unidimensionality: Items tap into the same underlying conceptual construct.',
+      'Tau-equivalence: All items measure the true score with equal precision.',
+      'Continuous or interval-approximated Likert response format (e.g. 1 to 5).',
+    ],
+    howToInterpret: [
+      'α ≥ 0.90: Excellent internal consistency (High-stakes / clinical grade).',
+      'α = 0.80 - 0.89: Good reliability (Industry gold-standard for survey research).',
+      'α = 0.70 - 0.79: Acceptable reliability for exploratory analysis.',
+      'Alpha if Item Deleted: If removing an item increases overall α, that question weakens the scale.',
+      'Corrected Item-Total r < 0.2: Item has poor correlation with the rest of the survey scale.',
     ],
   },
   {

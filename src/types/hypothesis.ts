@@ -13,7 +13,8 @@ export type HypothesisTestType =
   | 'kruskal_wallis'
   | 'wilcoxon_signed_rank'
   | 'spearman_correlation'
-  | 'kmeans_clustering';
+  | 'kmeans_clustering'
+  | 'cronbach_alpha';
 
 export interface TestConfig {
   testType: HypothesisTestType;
@@ -137,6 +138,44 @@ export interface ClusteringModelData {
   iterations: number;
 }
 
+export interface PostHocComparison {
+  groupA: string;
+  groupB: string;
+  meanDiff: number;
+  stdError: number;
+  qStat: number;
+  pValue: number;
+  ciLower: number;
+  ciUpper: number;
+  isSignificant: boolean;
+}
+
+export interface CronbachItemStats {
+  item: string;
+  mean: number;
+  stdDev: number;
+  itemTotalCorr: number;
+  alphaIfDeleted: number;
+}
+
+export interface CronbachAlphaData {
+  alpha: number;
+  standardizedAlpha: number;
+  itemCount: number;
+  totalVariance: number;
+  sumItemVariances: number;
+  interpretation: string;
+  items: CronbachItemStats[];
+}
+
+export interface RegressionDiagnostics {
+  durbinWatson: number;
+  durbinWatsonInterpretation: string;
+  breuschPaganStat: number;
+  breuschPaganPVal: number;
+  isHomoscedastic: boolean;
+}
+
 export interface HypothesisTestResult {
   testType: HypothesisTestType;
   testName: string;
@@ -159,4 +198,8 @@ export interface HypothesisTestResult {
   diagnostics?: AssumptionDiagnostics;
   proportionData?: ProportionComparisonData;
   clustering?: ClusteringModelData;
+  postHoc?: PostHocComparison[];
+  cronbach?: CronbachAlphaData;
+  regressionDiagnostics?: RegressionDiagnostics;
 }
+

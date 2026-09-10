@@ -71,7 +71,7 @@ node bin/babysql.js
 
 ---
 
-## 🧪 15 Enterprise Hypothesis Testing Models
+## 🧪 16 Enterprise Hypothesis Testing Models
 
 All models execute in client-side WebAssembly / TypeScript in **under 5 milliseconds** and generate executive plain-English summaries with actionable business takeaways:
 
@@ -79,15 +79,16 @@ All models execute in client-side WebAssembly / TypeScript in **under 5 millisec
 * **Two-Sample Welch's $t$-Test**: Unpaired test robust to unequal variances. Yields $t$-stat, Welch-Satterthwaite $df$, $p$-value, Cohen's $d$, and 95% Confidence Interval.
 * **One-Sample $t$-Test**: Tests sample mean against an external target/SLA benchmark.
 * **Paired Samples $t$-Test**: Within-subject before vs after interventions with difference scores.
-* **One-Way ANOVA ($F$-Test)**: Multi-group variance decomposition ($SS_{\text{between}} / SS_{\text{within}}$), $F$-ratio, and $\eta^2$ effect size.
+* **One-Way ANOVA ($F$-Test)**: Multi-group variance decomposition ($SS_{\text{between}} / SS_{\text{within}}$), $F$-ratio, and $\eta^2$ effect size. Includes **Tukey's HSD (Honestly Significant Difference)** post-hoc pairwise matrix (Tukey-Kramer method for unequal sizes) calculating Studentized range statistics ($q$), family-wise error adjusted $p$-values, and 95% confidence intervals.
 
 ### 2. Categorical & Proportions
-* **Two-Sample $Z$-Test of Proportions**: High-precision A/B testing comparing conversion rates ($p_1$ vs $p_2$). Outputs pooled variance $Z$-score, risk difference 95% CI, and percentage lift.
+* **Two-Sample $Z$-Test of Proportions**: High-precision A/B testing comparing conversion rates ($p_1$ vs $p_2$). Outputs pooled variance $Z$-score, risk difference 95% CI, percentage lift, achieved statistical power ($1 - \beta$), and an embedded **A Priori Statistical Power & Sample Size Determination Planner** calculating required sample sizes ($n$) for target MDE lifts at 80% power.
 * **Chi-Square Test of Independence ($\chi^2$)**: Contingency table analysis testing association between two categorical factors, with Cramér's $V$ and Cochran's rule validation.
 * **Chi-Square Goodness of Fit**: Tests categorical distribution against theoretical or equal frequencies.
 
-### 3. Predictive & Multivariate Modeling
-* **Multiple Linear Regression (Multivariate OLS)**: Predicts a continuous outcome from multiple numerical predictors. Calculates regression coefficients ($\beta_j$), standard errors, $t$-values, $p$-values, $R^2$, Adjusted $R^2$, ANOVA model $F$-test, and **Variance Inflation Factors (VIF)** for multicollinearity detection.
+### 3. Predictive, Psychometrics & Multivariate Modeling
+* **Multiple Linear Regression (Multivariate OLS)**: Predicts a continuous outcome from multiple numerical predictors. Calculates regression coefficients ($\beta_j$), standard errors, $t$-values, $p$-values, $R^2$, Adjusted $R^2$, ANOVA model $F$-test, and **Variance Inflation Factors (VIF)** for multicollinearity detection. Includes **Residual Assumption Diagnostics**: **Durbin-Watson ($d$)** first-order autocorrelation test and **Breusch-Pagan Lagrange Multiplier ($LM$)** heteroscedasticity test.
+* **Cronbach's Alpha ($\alpha$) Survey Scale Reliability**: Evaluates internal consistency and measurement reliability of multi-item Likert rating scales, CSAT, or NPS questionnaires. Reports raw $\alpha$, standardized $\alpha$, qualitative reliability tier (Excellent, Good, Acceptable, etc.), and a comprehensive **Item-Total Statistics Table** with Corrected Item-Total correlation ($r$) and "Alpha if item deleted" ($\alpha_{-j}$) diagnostics.
 * **Binary Logistic Regression**: Fits log-odds of a binary event ($Y \in \{0, 1\}$) via Iteratively Reweighted Least Squares (IRLS Newton-Raphson). Reports logit coefficients, Wald $Z$-scores, **Odds Ratios ($e^\beta$)**, 95% CI of Odds Ratios, Log-Likelihood, McFadden's Pseudo-$R^2$, and a **Confusion Matrix** with Accuracy, Precision, Recall, and F1-Score.
 * **Simple Linear Regression**: Single-predictor OLS regression with line of best fit.
 * **Pearson Correlation**: Bivariate linear association coefficient ($r$), $t$-test, and shared variance ($r^2$).
@@ -142,6 +143,28 @@ To maintain a featherweight footprint with zero external graphing dependencies, 
    * Count and percentage tags displayed above each bar for immediate visibility.
    * Interval labels and cumulative percentages beneath each bin on the X-axis.
    * Mean and Median reference indicators.
+
+---
+
+## 🎲 Dataset Sampling & Theoretical Simulation
+
+BabySQL includes an integrated sampling and synthetic distribution engine with pure mathematical algorithms:
+* **Proportional Stratified Sampling (Hamilton / Largest-Remainder Quota Method)**:
+  * Guarantees sample stratum weights ($w_h = n_h / n$) strictly mirror population stratum weights ($W_h = N_h / N$) with zero selection bias.
+  * Live interactive allocation breakdown table showing exact population shares vs sample allocations.
+  * Supports fixed sample counts or percentage-of-dataset quotas.
+* **Equal Stratified Sampling**: Enforces identical sample representation ($n_h = c$) across minority and majority subgroups.
+* **Fisher-Yates (Knuth) Unbiased Shuffle**: $O(N)$ random permutation where every outcome is equally likely ($1 / N!$).
+* **Bootstrap Resampling**: Independent draws with replacement to empirical confidence bounds.
+* **Systematic Interval Sampling**: Every $k$-th record with randomized starting offset.
+* **Theoretical Distribution Simulation (via jStat)**: Generates queryable SQLite tables drawn directly from parametric theoretical models in $< 5\text{ms}$:
+  * Normal (Gaussian) $\mathcal{N}(\mu, \sigma)$
+  * Continuous Uniform $\mathcal{U}(a, b)$
+  * Student's $t$ with heavy tails ($df$)
+  * Chi-Square $\chi^2(df)$
+  * Gamma $\Gamma(k, \theta)$
+  * Beta $\text{Beta}(\alpha, \beta)$
+  * Exponential $\text{Exp}(\lambda)$
 
 ---
 

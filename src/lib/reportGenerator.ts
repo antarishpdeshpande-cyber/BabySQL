@@ -72,6 +72,27 @@ export function generateFullHypothesisMarkdown(
   });
   lines.push(``);
 
+  // Cronbach's Alpha Scale Reliability
+  if (result.cronbach) {
+    lines.push(`### 📐 Cronbach's Alpha Survey Scale Reliability`);
+    lines.push(``);
+    lines.push(`- **Raw Cronbach's Alpha ($\\alpha$):** \`${result.cronbach.alpha}\``);
+    lines.push(`- **Standardized Alpha:** \`${result.cronbach.standardizedAlpha}\``);
+    lines.push(`- **Number of Scale Items:** ${result.cronbach.itemCount}`);
+    lines.push(`- **Total Score Variance:** ${result.cronbach.totalVariance}`);
+    lines.push(`- **Internal Consistency Tier:** ${result.cronbach.interpretation}`);
+    lines.push(``);
+    lines.push(`#### Item-Total Statistics`);
+    lines.push(``);
+    lines.push(`| Survey Item | Item Mean | Item Std Dev | Corrected Item-Total Corr ($r$) | Alpha If Deleted ($\\alpha_{-j}$) | Recommendation |`);
+    lines.push(`| :--- | :--- | :--- | :--- | :--- | :--- |`);
+    result.cronbach.items.forEach((it) => {
+      const action = it.alphaIfDeleted > result.cronbach!.alpha + 0.02 ? 'Consider Deleting' : it.itemTotalCorr < 0.2 ? 'Weak Correlation' : 'Retain Item';
+      lines.push(`| **${it.item}** | ${it.mean} | ${it.stdDev} | ${it.itemTotalCorr} | ${it.alphaIfDeleted} | ${action} |`);
+    });
+    lines.push(``);
+  }
+
   // 1. Group Summaries (ANOVA / Kruskal-Wallis / Two-sample t-test / Mann-Whitney)
   if (result.groupSummaries && result.groupSummaries.length > 0) {
     lines.push(`### 👥 Group Summary Breakdown`);
@@ -80,6 +101,18 @@ export function generateFullHypothesisMarkdown(
     lines.push(`| :--- | :--- | :--- | :--- | :--- | :--- |`);
     result.groupSummaries.forEach((g) => {
       lines.push(`| **${g.group}** | ${g.count} | ${g.mean} | ${g.stdDev} | ${g.stdError} | [${g.ciLower}, ${g.ciUpper}] |`);
+    });
+    lines.push(``);
+  }
+
+  // Tukey's HSD Post-Hoc Pairwise Matrix (ANOVA)
+  if (result.postHoc && result.postHoc.length > 0) {
+    lines.push(`### 🔬 Tukey's HSD Post-Hoc Pairwise Matrix (Tukey-Kramer Test)`);
+    lines.push(``);
+    lines.push(`| Pairwise Comparison | Mean Diff | Std Error | Studentized Range ($q$) | Adjusted $p$-value | 95% Confidence Interval | Significant |`);
+    lines.push(`| :--- | :--- | :--- | :--- | :--- | :--- | :--- |`);
+    result.postHoc.forEach((p) => {
+      lines.push(`| **${p.groupA}** vs **${p.groupB}** | \`${p.meanDiff > 0 ? '+' : ''}${p.meanDiff}\` | ${p.stdError} | ${p.qStat} | ${p.pValue} | [${p.ciLower}, ${p.ciUpper}] | ${p.isSignificant ? '**Yes (p < alpha)**' : 'No'} |`);
     });
     lines.push(``);
   }
@@ -136,6 +169,15 @@ export function generateFullHypothesisMarkdown(
       });
     }
     lines.push(``);
+
+    if (result.regressionDiagnostics) {
+      lines.push(`#### 🛡️ Residual Assumption Diagnostics (Gauss-Markov Check)`);
+      lines.push(``);
+      lines.push(`- **Durbin-Watson ($d$):** \`${result.regressionDiagnostics.durbinWatson}\` (${result.regressionDiagnostics.durbinWatsonInterpretation})`);
+      lines.push(`- **Breusch-Pagan Test ($LM$):** \`${result.regressionDiagnostics.breuschPaganStat}\` ($p$ = ${result.regressionDiagnostics.breuschPaganPVal})`);
+      lines.push(`- **Homoscedasticity Verdict:** ${result.regressionDiagnostics.isHomoscedastic ? 'Constant variance holds (Residuals homoscedastic)' : 'Heteroscedasticity detected (Consider robust standard errors)'}`);
+      lines.push(``);
+    }
   }
 
   // 4. Binary Logistic Classification Confusion Matrix
@@ -179,7 +221,7 @@ export function generateFullHypothesisMarkdown(
 
   // 6. Proportions Test (A/B testing)
   if (result.proportionData) {
-    lines.push(`### ⚖️ A/B Proportion Comparison`);
+    lines.push(`### ⚖️ A/B Proportion Comparison & Power Planning`);
     lines.push(``);
     lines.push(`- **Control (${result.proportionData.group1Name}):** ${result.proportionData.count1}/${result.proportionData.total1} (${(result.proportionData.rate1 * 100).toFixed(2)}%)`);
     lines.push(`- **Variant (${result.proportionData.group2Name}):** ${result.proportionData.count2}/${result.proportionData.total2} (${(result.proportionData.rate2 * 100).toFixed(2)}%)`);

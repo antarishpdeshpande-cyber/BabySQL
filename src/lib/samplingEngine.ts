@@ -10,8 +10,19 @@ export interface SamplingConfig {
   count?: number;
   percentage?: number;
   stratifyColumn?: string;
+  stratifiedAllocation?: 'proportional' | 'equal';
+  stratifiedTotalCount?: number;
+  stratifiedPercentage?: number;
   countPerStratum?: number;
   stepK?: number;
+}
+
+export interface StratumAllocationInfo {
+  stratum: string;
+  populationSize: number;
+  populationShare: number; // 0 to 1
+  sampleSize: number;
+  sampleShare: number; // 0 to 1
 }
 
 export interface DistributionSamplingConfig {
@@ -41,6 +52,75 @@ export function fisherYatesShuffle<T>(array: T[]): T[] {
 }
 
 /**
+ * Computes proportional allocation of sample sizes across strata using
+ * the Hare-Niemeyer / Hamilton largest remainder quota method.
+ * Mathematically guarantees that sample stratum proportions (w_h = n_h / n)
+ * mirror population stratum proportions (W_h = N_h / N) with minimal distortion,
+ * and sum(n_h) strictly equals target sample size n.
+ */
+export function computeProportionalAllocation(
+  strataSizes: Map<string, number>,
+  targetTotal: number
+): Map<string, number> {
+  const totalPop = Array.from(strataSizes.values()).reduce((a, b) => a + b, 0);
+  if (totalPop === 0 || targetTotal <= 0) return new Map();
+
+  const clampedTarget = Math.min(targetTotal, totalPop);
+  const allocation = new Map<string, number>();
+  const remainders: { key: string; rem: number; max: number }[] = [];
+
+  let allocatedSum = 0;
+
+  strataSizes.forEach((popSize, key) => {
+    if (popSize <= 0) {
+      allocation.set(key, 0);
+      return;
+    }
+    const exactQuota = (clampedTarget * popSize) / totalPop;
+    let base = Math.floor(exactQuota);
+    // Guarantee at least 1 row per stratum if target is sufficient
+    if (base === 0 && clampedTarget >= strataSizes.size) {
+      base = 1;
+    }
+    base = Math.min(base, popSize);
+    allocation.set(key, base);
+    allocatedSum += base;
+    remainders.push({
+      key,
+      rem: exactQuota - Math.floor(exactQuota),
+      max: popSize,
+    });
+  });
+
+  // Largest remainder method: distribute leftover slots to strata with largest remainders
+  let deficit = clampedTarget - allocatedSum;
+  if (deficit > 0) {
+    remainders.sort((a, b) => b.rem - a.rem);
+    for (const item of remainders) {
+      if (deficit <= 0) break;
+      const current = allocation.get(item.key) || 0;
+      if (current < item.max) {
+        allocation.set(item.key, current + 1);
+        deficit--;
+      }
+    }
+  } else if (deficit < 0) {
+    // If over-allocated due to base=1 guarantees
+    remainders.sort((a, b) => a.rem - b.rem);
+    for (const item of remainders) {
+      if (deficit >= 0) break;
+      const current = allocation.get(item.key) || 0;
+      if (current > 1) {
+        allocation.set(item.key, current - 1);
+        deficit++;
+      }
+    }
+  }
+
+  return allocation;
+}
+
+/**
  * Bootstrap Resampling (Sampling with replacement).
  * Each draw is independent with probability 1/N.
  */
@@ -65,6 +145,9 @@ export function generateSampleTable(config: SamplingConfig): { tableName: string
     count = 50,
     percentage = 20,
     stratifyColumn,
+    stratifiedAllocation = 'proportional',
+    stratifiedTotalCount,
+    stratifiedPercentage,
     countPerStratum = 15,
     stepK = 5,
   } = config;
@@ -132,18 +215,39 @@ export function generateSampleTable(config: SamplingConfig): { tableName: string
 
       // Group rows by stratum
       const strataMap = new Map<string, any[][]>();
+      const strataSizes = new Map<string, number>();
       for (const row of rows) {
         const key = String(row[stratIdx] ?? 'NULL');
         if (!strataMap.has(key)) strataMap.set(key, []);
         strataMap.get(key)!.push(row);
+        strataSizes.set(key, (strataSizes.get(key) || 0) + 1);
       }
 
-      // Fisher-Yates shuffle each stratum independently
       sampled = [];
-      strataMap.forEach((stratumRows) => {
-        const shuffledStratum = fisherYatesShuffle(stratumRows);
-        sampled.push(...shuffledStratum.slice(0, Math.min(countPerStratum, stratumRows.length)));
-      });
+
+      if (stratifiedAllocation === 'proportional') {
+        // Proportional allocation: n_h = n * (N_h / N)
+        const targetN = stratifiedPercentage !== undefined
+          ? Math.max(1, Math.round((rows.length * Math.min(100, Math.max(1, stratifiedPercentage))) / 100))
+          : Math.max(1, Math.min(rows.length, stratifiedTotalCount || count || 100));
+
+        const allocationMap = computeProportionalAllocation(strataSizes, targetN);
+
+        strataMap.forEach((stratumRows, stratumKey) => {
+          const allocCount = allocationMap.get(stratumKey) || 0;
+          if (allocCount > 0) {
+            const shuffledStratum = fisherYatesShuffle(stratumRows);
+            sampled.push(...shuffledStratum.slice(0, allocCount));
+          }
+        });
+      } else {
+        // Equal allocation: fixed count per stratum
+        const perStratum = countPerStratum || 15;
+        strataMap.forEach((stratumRows) => {
+          const shuffledStratum = fisherYatesShuffle(stratumRows);
+          sampled.push(...shuffledStratum.slice(0, Math.min(perStratum, stratumRows.length)));
+        });
+      }
 
       // Final Fisher-Yates shuffle so categories are evenly dispersed
       sampled = fisherYatesShuffle(sampled);
@@ -271,5 +375,66 @@ export function generateDistributionSampleTable(
     tableName: finalTableName,
     rowCount: values.length,
   };
+}
+
+/**
+ * Calculates stratum population breakdown and projected sample allocation for UI preview.
+ */
+export function getStratifiedBreakdown(
+  tableName: string,
+  stratifyColumn: string,
+  allocation: 'proportional' | 'equal',
+  targetTotalOrCount: number,
+  isPercentage = false
+): StratumAllocationInfo[] {
+  const db = getDatabase();
+  if (!db || !tableName || !stratifyColumn) return [];
+
+  try {
+    const res = db.exec(`SELECT "${stratifyColumn}", COUNT(*) FROM "${tableName}" GROUP BY "${stratifyColumn}";`);
+    if (!res || res.length === 0 || !res[0].values) return [];
+
+    const strataSizes = new Map<string, number>();
+    let totalPop = 0;
+    for (const row of res[0].values) {
+      const key = String(row[0] ?? 'NULL');
+      const count = Number(row[1]) || 0;
+      strataSizes.set(key, count);
+      totalPop += count;
+    }
+
+    if (totalPop === 0) return [];
+
+    let sampleSizes = new Map<string, number>();
+    if (allocation === 'proportional') {
+      const targetN = isPercentage
+        ? Math.max(1, Math.round((totalPop * Math.min(100, Math.max(1, targetTotalOrCount))) / 100))
+        : Math.max(1, Math.min(totalPop, targetTotalOrCount));
+      sampleSizes = computeProportionalAllocation(strataSizes, targetN);
+    } else {
+      strataSizes.forEach((pop, key) => {
+        sampleSizes.set(key, Math.min(pop, Math.max(1, targetTotalOrCount)));
+      });
+    }
+
+    const totalSample = Array.from(sampleSizes.values()).reduce((a, b) => a + b, 0);
+
+    const result: StratumAllocationInfo[] = [];
+    strataSizes.forEach((popSize, stratum) => {
+      const n_h = sampleSizes.get(stratum) || 0;
+      result.push({
+        stratum,
+        populationSize: popSize,
+        populationShare: totalPop > 0 ? popSize / totalPop : 0,
+        sampleSize: n_h,
+        sampleShare: totalSample > 0 ? n_h / totalSample : 0,
+      });
+    });
+
+    return result.sort((a, b) => b.populationSize - a.populationSize);
+  } catch (err) {
+    console.error('getStratifiedBreakdown error:', err);
+    return [];
+  }
 }
 
