@@ -47,19 +47,44 @@ export function generateFullHypothesisMarkdown(
 
   // Diagnostics
   if (result.diagnostics) {
-    lines.push(`### 🛡️ Statistical Assumption Diagnostics`);
-    lines.push(``);
-    lines.push(`- **Skewness:** ${result.diagnostics.skewness}`);
-    lines.push(`- **Excess Kurtosis:** ${result.diagnostics.kurtosis}`);
-    lines.push(`- **Jarque-Bera Normality Statistic:** ${result.diagnostics.jarqueBeraStat} ($p$ = ${result.diagnostics.jarqueBeraPVal})`);
-    if (result.diagnostics.recommendation) {
-      lines.push(`- **Advisory Note:** ${result.diagnostics.recommendation}`);
+    if (result.testType === 'logistic_regression') {
+      lines.push(`### 🛡️ Logistic Model Specification & Assumption Diagnostics`);
+      lines.push(``);
+      lines.push(`- **Outcome Variable Type:** Binary Indicator ($Y \\in \\{0, 1\\}$)`);
+      if (result.diagnostics.classBalance) {
+        lines.push(`- **Class Balance:** \`${result.diagnostics.classBalance}\``);
+      }
+      if (result.diagnostics.eventsPerVariable !== undefined) {
+        const epvStatusText =
+          result.diagnostics.epvStatus === 'sufficient'
+            ? 'Sufficient (EPV ≥ 10 guideline met - Peduzzi et al.)'
+            : result.diagnostics.epvStatus === 'marginal'
+            ? 'Marginal (EPV between 5 and 10 - slight small-sample variance risk)'
+            : 'Low (EPV < 5 - risk of overfitting / separation)';
+        lines.push(`- **Events Per Variable (EPV):** \`${result.diagnostics.eventsPerVariable}\` (${epvStatusText})`);
+      }
+      lines.push(`- **Multicollinearity Check:** Variance Inflation Factors (VIF) evaluated for all independent predictors.`);
+      if (result.diagnostics.recommendation) {
+        lines.push(`- **Advisory Note:** ${result.diagnostics.recommendation}`);
+      }
+      lines.push(``);
+      lines.push(`---`);
+      lines.push(``);
     } else {
-      lines.push(`- **Advisory Note:** Normality and distributional assumptions satisfied.`);
+      lines.push(`### 🛡️ Statistical Assumption Diagnostics`);
+      lines.push(``);
+      lines.push(`- **Skewness:** ${result.diagnostics.skewness}`);
+      lines.push(`- **Excess Kurtosis:** ${result.diagnostics.kurtosis}`);
+      lines.push(`- **Jarque-Bera Normality Statistic:** ${result.diagnostics.jarqueBeraStat} ($p$ = ${result.diagnostics.jarqueBeraPVal})`);
+      if (result.diagnostics.recommendation) {
+        lines.push(`- **Advisory Note:** ${result.diagnostics.recommendation}`);
+      } else {
+        lines.push(`- **Advisory Note:** Normality and distributional assumptions satisfied.`);
+      }
+      lines.push(``);
+      lines.push(`---`);
+      lines.push(``);
     }
-    lines.push(``);
-    lines.push(`---`);
-    lines.push(``);
   }
 
   // Metrics Table
@@ -144,14 +169,23 @@ export function generateFullHypothesisMarkdown(
     lines.push(``);
     if (isLogistic) {
       lines.push(
-        `| Feature | Log-Odds ($\\beta$) | Std Error | Wald $Z$ | $p$-value | Odds Ratio ($e^\\beta$) | 95% CI of OR |`
+        `| Feature | Log-Odds ($\\beta$) | Std Error | Wald $Z$ | $p$-value | Odds Ratio ($e^\\beta$) | 95% CI of OR | VIF |`
       );
       lines.push(
-        `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |`
+        `| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |`
       );
       result.regressionCoefficients.forEach((c) => {
+        const formatOR = (val?: number) => {
+          if (val === undefined) return 'N/A';
+          if (val < 0.001) return '< 0.001';
+          if (val > 100000) return val.toExponential(2);
+          return val.toLocaleString('en-US', { maximumFractionDigits: 3 });
+        };
+        const orStr = formatOR(c.oddsRatio);
+        const ciStr = c.ciLower !== undefined && c.ciUpper !== undefined ? `[${formatOR(c.ciLower)}, ${formatOR(c.ciUpper)}]` : 'N/A';
+        const vifStr = c.vif !== undefined ? String(c.vif) : '-';
         lines.push(
-          `| **${c.variable}** | \`${c.estimate}\` | ${c.stdError} | ${c.zStat ?? c.tStat ?? 'N/A'} | ${c.pValue} | **${c.oddsRatio ?? 'N/A'}** | [${c.ciLower ?? ''}, ${c.ciUpper ?? ''}] |`
+          `| **${c.variable}** | \`${c.estimate}\` | ${c.stdError} | ${c.zStat ?? c.tStat ?? 'N/A'} | ${c.pValue < 0.0001 ? '< 0.0001' : c.pValue} | **${orStr}** | ${ciStr} | ${vifStr} |`
         );
       });
     } else {
@@ -182,14 +216,24 @@ export function generateFullHypothesisMarkdown(
 
   // 4. Binary Logistic Classification Confusion Matrix
   if (result.confusionMatrix) {
+    const formatPct = (val: number) => (val <= 1 ? (val * 100).toFixed(1) + '%' : val.toFixed(1) + '%');
+    const formatScore = (val: number) => (val <= 1 ? val.toFixed(3) : (val / 100).toFixed(3));
+
     lines.push(`#### 🎯 Classification Performance & Confusion Matrix`);
+    lines.push(``);
+    if (result.confusionMatrix.threshold !== undefined) {
+      lines.push(`- **Decision Cutoff Threshold ($\\tau$):** \`${result.confusionMatrix.threshold}\``);
+    }
+    if (result.confusionMatrix.optimalThreshold !== undefined) {
+      lines.push(`- **Optimal Youden Cutoff ($J = ${result.confusionMatrix.optimalYoudenJ ?? ''}$):** \`\\tau = ${result.confusionMatrix.optimalThreshold}\` (Balances sensitivity and specificity)`);
+    }
     lines.push(``);
     lines.push(`| Metric | Value | Interpretation |`);
     lines.push(`| :--- | :--- | :--- |`);
-    lines.push(`| **Accuracy** | ${result.confusionMatrix.accuracy}% | Overall correct classification rate |`);
-    lines.push(`| **Precision** | ${result.confusionMatrix.precision}% | True positives / Predicted positives |`);
-    lines.push(`| **Recall (Sensitivity)** | ${result.confusionMatrix.recall}% | True positives / Actual positives |`);
-    lines.push(`| **F1-Score** | ${result.confusionMatrix.f1Score}% | Harmonic mean of precision & recall |`);
+    lines.push(`| **Accuracy** | ${formatPct(result.confusionMatrix.accuracy)} | Overall correct classification rate |`);
+    lines.push(`| **Precision** | ${formatPct(result.confusionMatrix.precision)} | True positives / Predicted positives |`);
+    lines.push(`| **Recall (Sensitivity)** | ${formatPct(result.confusionMatrix.recall)} | True positives / Actual positives |`);
+    lines.push(`| **F1-Score** | ${formatScore(result.confusionMatrix.f1Score)} | Harmonic mean of precision & recall |`);
     lines.push(`| **True Positives (TP)** | ${result.confusionMatrix.tp} | Event correctly predicted |`);
     lines.push(`| **True Negatives (TN)** | ${result.confusionMatrix.tn} | Non-event correctly predicted |`);
     lines.push(`| **False Positives (FP)** | ${result.confusionMatrix.fp} | Type I Error |`);
@@ -357,8 +401,9 @@ export function generateFullHypothesisMarkdown(
     lines.push(``);
   }
 
-  // 15. Distribution Summary if available
-  if (targetNumericData && targetNumericData.length >= 2) {
+  // 15. Distribution Summary if available (Only for continuous outcome tests)
+  const isCategoricalOrBinary = ['logistic_regression', 'chi_square', 'chi_square_gof', 'binomial_test', 'mcnemar_test'].includes(result.testType);
+  if (!isCategoricalOrBinary && targetNumericData && targetNumericData.length >= 2) {
     const sorted = [...targetNumericData].sort((a, b) => a - b);
     const min = sorted[0];
     const max = sorted[sorted.length - 1];
@@ -368,7 +413,7 @@ export function generateFullHypothesisMarkdown(
     lines.push(`- **Minimum:** ${min}`);
     lines.push(`- **Median ($Q_2$):** ${med}`);
     lines.push(`- **Maximum:** ${max}`);
-    lines.push(`- **Total Observations Analyzed:** ${sorted.length}`);
+    lines.push(`- **Total Observations Analyzed:** ${result.sampleSize}`);
     lines.push(``);
   }
 

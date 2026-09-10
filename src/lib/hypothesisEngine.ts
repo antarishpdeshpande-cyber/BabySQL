@@ -1359,7 +1359,8 @@ export function runLogisticRegression(
   predictorNames: string[],
   targetName: string,
   tableName: string,
-  alpha = 0.05
+  alpha = 0.05,
+  decisionThreshold = 0.50
 ): HypothesisTestResult {
   const n = yVector.length;
   const k = predictorNames.length;
@@ -1440,9 +1441,8 @@ export function runLogisticRegression(
     }
   }
 
-  // Final probabilities, log-likelihood, and confusion matrix
+  // Final probabilities and log-likelihood
   let logLik = 0;
-  let tp = 0, fp = 0, fn = 0, tn = 0;
   const finalProbs: number[] = [];
 
   for (let i = 0; i < n; i++) {
@@ -1454,8 +1454,34 @@ export function runLogisticRegression(
 
     const safeP = Math.max(1e-12, Math.min(1 - 1e-12, pi));
     logLik += yVector[i] * Math.log(safeP) + (1 - yVector[i]) * Math.log(1 - safeP);
+  }
 
-    const predictedClass = pi >= 0.5 ? 1 : 0;
+  // Scan across probability continuum to determine optimal Youden's J threshold
+  let bestJ = -1;
+  let bestTau = 0.50;
+  for (let t = 0.02; t <= 0.98; t += 0.02) {
+    let curTP = 0, curFP = 0, curFN = 0, curTN = 0;
+    for (let i = 0; i < n; i++) {
+      const pred = finalProbs[i] >= t ? 1 : 0;
+      if (yVector[i] === 1 && pred === 1) curTP++;
+      else if (yVector[i] === 0 && pred === 1) curFP++;
+      else if (yVector[i] === 1 && pred === 0) curFN++;
+      else curTN++;
+    }
+    const sens = curTP + curFN > 0 ? curTP / (curTP + curFN) : 0;
+    const spec = curTN + curFP > 0 ? curTN / (curTN + curFP) : 0;
+    const youdenJ = sens + spec - 1;
+    if (youdenJ > bestJ) {
+      bestJ = youdenJ;
+      bestTau = Number(t.toFixed(2));
+    }
+  }
+
+  // Confusion matrix at chosen decision cutoff
+  const cutoff = Math.max(0.01, Math.min(0.99, decisionThreshold));
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  for (let i = 0; i < n; i++) {
+    const predictedClass = finalProbs[i] >= cutoff ? 1 : 0;
     if (yVector[i] === 1 && predictedClass === 1) tp++;
     else if (yVector[i] === 0 && predictedClass === 1) fp++;
     else if (yVector[i] === 1 && predictedClass === 0) fn++;
@@ -1471,6 +1497,40 @@ export function runLogisticRegression(
   const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
   const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
   const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+
+  // Calculate VIF for each predictor in the logistic model
+  const vifs: number[] = [];
+  for (let j = 0; j < k; j++) {
+    if (k === 1) {
+      vifs.push(1.0);
+    } else {
+      const yAux = xMatrix.map((r) => r[j]);
+      const xAux = xMatrix.map((r) => r.filter((_, idx) => idx !== j));
+      try {
+        const auxRes = runMultipleLinearRegression(
+          xAux,
+          yAux,
+          predictorNames.filter((_, idx) => idx !== j),
+          predictorNames[j],
+          tableName,
+          alpha
+        );
+        const auxR2 = Number(auxRes.metrics.find((m) => m.name === 'R-Squared (R²)')?.value || 0);
+        const vif = 1 / Math.max(1e-4, 1 - auxR2);
+        vifs.push(Number(Math.min(999, vif).toFixed(2)));
+      } catch {
+        vifs.push(1.0);
+      }
+    }
+  }
+
+  // Helper to safely format odds ratios and CI bounds without arbitrary 9999 truncations
+  const safeFormatNum = (val: number): number => {
+    if (!isFinite(val)) return val > 0 ? 1e12 : 0;
+    if (val > 100000) return Number(val.toPrecision(5));
+    if (val < 0.0001) return Number(val.toExponential(2));
+    return Number(val.toFixed(3));
+  };
 
   // Standard errors from inverted Hessian
   const coefficients: RegressionModelCoefficients[] = [];
@@ -1495,9 +1555,10 @@ export function runLogisticRegression(
       stdError: Number(se.toFixed(4)),
       zStat: Number(zVal.toFixed(3)),
       pValue: Number(pVal.toFixed(4)),
-      oddsRatio: Number(Math.min(9999, Math.max(0.0001, or)).toFixed(3)),
-      ciLower: Number(Math.min(9999, Math.max(0.0001, ciLow)).toFixed(3)),
-      ciUpper: Number(Math.min(9999, Math.max(0.0001, ciHigh)).toFixed(3)),
+      vif: j === 0 ? undefined : vifs[j - 1],
+      oddsRatio: safeFormatNum(or),
+      ciLower: safeFormatNum(ciLow),
+      ciUpper: safeFormatNum(ciHigh),
     });
   }
 
@@ -1510,15 +1571,38 @@ export function runLogisticRegression(
     lrPVal = lrStat > 5.99 ? 0.01 : 0.5;
   }
 
+  // Events Per Variable (EPV) and class balance diagnostics
+  const nEvents = yVector.reduce((sum, v) => sum + v, 0);
+  const nNonEvents = n - nEvents;
+  const baseRate = nEvents / n;
+  const minEvents = Math.min(nEvents, nNonEvents);
+  const epv = k > 0 ? minEvents / k : minEvents;
+  const epvStatus: 'sufficient' | 'marginal' | 'insufficient' =
+    epv >= 10 ? 'sufficient' : epv >= 5 ? 'marginal' : 'insufficient';
+
+  let logisticRecommendation = '';
+  if (epv < 5) {
+    logisticRecommendation = `High risk of overfitting / separation: Events Per Variable (EPV = ${epv.toFixed(1)}) is severely below the recommended minimum of 10 events per predictor (Peduzzi et al.). Consider variable reduction.`;
+  } else if (epv < 10) {
+    logisticRecommendation = `Marginal sample size: Events Per Variable (EPV = ${epv.toFixed(1)}) is below the recommended 10:1 ratio. Parameter estimates and odds ratios may exhibit slight small-sample variance inflation.`;
+  } else if (baseRate < 0.15 || baseRate > 0.85) {
+    logisticRecommendation = `Imbalanced class base rate (${(baseRate * 100).toFixed(1)}% events). The standard 0.50 cutoff may suppress event recall. Consider the optimal Youden cutoff (τ = ${bestTau}) to balance sensitivity and specificity.`;
+  } else {
+    logisticRecommendation = `Logistic model specification validated. Sample size meets the EPV ≥ 10 guideline (EPV = ${epv.toFixed(1)}) for stable maximum likelihood estimation.`;
+  }
+
   const isSignificant = lrPVal < alpha;
   const sigDrivers = coefficients.filter((c, idx) => idx > 0 && c.pValue < alpha);
 
   let takeaway = isSignificant
-    ? `Statistically significant logistic regression model (χ²(${k}) = ${lrStat.toFixed(2)}, p = ${lrPVal.toFixed(4)} < ${alpha}, McFadden's R² = ${pseudoR2.toFixed(3)}). Classification accuracy is ${(accuracy * 100).toFixed(1)}% (Precision: ${(precision * 100).toFixed(1)}%, Recall: ${(recall * 100).toFixed(1)}%).`
+    ? `Statistically significant logistic regression model (χ²(${k}) = ${lrStat.toFixed(2)}, p = ${lrPVal.toFixed(4)} < ${alpha}, McFadden's R² = ${pseudoR2.toFixed(3)}). Classification accuracy is ${(accuracy * 100).toFixed(1)}% (Precision: ${(precision * 100).toFixed(1)}%, Recall: ${(recall * 100).toFixed(1)}% at cutoff τ = ${cutoff.toFixed(2)}).`
     : `The logistic model is not statistically significant (χ² = ${lrStat.toFixed(2)}, p = ${lrPVal.toFixed(4)} ≥ ${alpha}).`;
 
   if (sigDrivers.length > 0) {
     takeaway += ` Significant predictor odds ratios: ${sigDrivers.map((d) => `"${d.variable}" (OR = ${d.oddsRatio})`).join(', ')}.`;
+  }
+  if (bestTau !== cutoff && (baseRate < 0.15 || baseRate > 0.85)) {
+    takeaway += ` Optimal Youden cutoff is τ = ${bestTau} (Youden J = ${bestJ.toFixed(3)}).`;
   }
 
   return {
@@ -1552,13 +1636,30 @@ export function runLogisticRegression(
       precision: Number(precision.toFixed(3)),
       recall: Number(recall.toFixed(3)),
       f1Score: Number(f1.toFixed(3)),
+      threshold: Number(cutoff.toFixed(2)),
+      optimalThreshold: bestTau,
+      optimalYoudenJ: Number(bestJ.toFixed(3)),
+    },
+    diagnostics: {
+      skewness: 0,
+      kurtosis: 0,
+      jarqueBeraStat: 0,
+      jarqueBeraPVal: 1,
+      isNormal: true,
+      classBalance: `${nEvents} (${(baseRate * 100).toFixed(1)}%) Positive / ${nNonEvents} (${((1 - baseRate) * 100).toFixed(1)}%) Negative`,
+      eventsPerVariable: Number(epv.toFixed(1)),
+      epvStatus,
+      baseRate: Number(baseRate.toFixed(4)),
+      recommendation: logisticRecommendation,
     },
     metrics: [
       { name: "McFadden's Pseudo-R²", value: Number(pseudoR2.toFixed(4)), description: 'Log-likelihood ratio improvement over null baseline' },
       { name: 'Model Likelihood Ratio χ²', value: Number(lrStat.toFixed(3)), description: 'Omnibus model test statistic' },
       { name: 'Model p-Value', value: lrPVal < 0.0001 ? '< 0.0001' : Number(lrPVal.toFixed(4)), description: 'Significance under null hypothesis' },
+      { name: 'Decision Cutoff (τ)', value: `${(cutoff * 100).toFixed(0)}% (Youden J* = ${(bestTau * 100).toFixed(0)}%)`, description: 'Classification probability threshold & optimal Youden cutoff' },
       { name: 'Overall Accuracy', value: `${(accuracy * 100).toFixed(1)}%`, description: 'Proportion of correctly classified observations' },
       { name: 'Precision / Recall', value: `${(precision * 100).toFixed(1)}% / ${(recall * 100).toFixed(1)}%`, description: 'Positive predictive value / Sensitivity' },
+      { name: 'Events Per Variable (EPV)', value: Number(epv.toFixed(1)), description: epv >= 10 ? 'Sufficient (≥ 10 per Peduzzi et al.)' : 'Marginal (< 10)' },
       { name: 'Log-Likelihood', value: Number(logLik.toFixed(2)), description: 'Log-likelihood at convergence' },
     ],
   };
@@ -2430,7 +2531,7 @@ export function executeHypothesisTest(
         }
       }
 
-      result = runLogisticRegression(xMatrix, yVector, preds, targetColumn, tableName, alpha);
+      result = runLogisticRegression(xMatrix, yVector, preds, targetColumn, tableName, alpha, config.decisionThreshold);
       break;
     }
 
@@ -2665,8 +2766,9 @@ export function executeHypothesisTest(
       throw new Error(`Unsupported test type "${testType}".`);
   }
 
-  // Attach automated assumption diagnostics if target is continuous
-  if (targetDiagnostics && !result.diagnostics) {
+  // Attach automated assumption diagnostics only if target is continuous
+  const isNonContinuousTarget = ['logistic_regression', 'chi_square', 'chi_square_gof', 'binomial_test', 'mcnemar_test'].includes(testType);
+  if (targetDiagnostics && !result.diagnostics && !isNonContinuousTarget) {
     result.diagnostics = targetDiagnostics;
   }
 

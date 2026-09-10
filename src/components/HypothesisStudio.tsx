@@ -275,6 +275,7 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
   const [successValue, setSuccessValue] = useState<string>('1');
   const [numClusters, setNumClusters] = useState<number>(3);
   const [alpha, setAlpha] = useState<number>(0.05);
+  const [decisionThreshold, setDecisionThreshold] = useState<number>(0.50);
   const [result, setResult] = useState<HypothesisTestResult | null>(null);
   const [targetNumericData, setTargetNumericData] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -391,6 +392,7 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
         benchmarkValue,
         successValue,
         numClusters,
+        decisionThreshold: testType === 'logistic_regression' ? decisionThreshold : undefined,
         alpha,
         alternative: 'two-sided',
       };
@@ -421,6 +423,33 @@ export const HypothesisStudio: React.FC<HypothesisStudioProps> = ({
       setError(err.message || 'Failed to execute hypothesis test.');
       setResult(null);
       setTargetNumericData([]);
+    }
+  };
+
+  const handleApplyThreshold = (newCutoff: number) => {
+    setDecisionThreshold(newCutoff);
+    if (!selectedTable || !targetColumn) return;
+    try {
+      const queryRes = executeQuery(`SELECT * FROM "${selectedTable}";`);
+      if (!queryRes.values || queryRes.values.length === 0) return;
+      const config: TestConfig = {
+        testType,
+        tableName: selectedTable,
+        targetColumn,
+        groupColumn,
+        secondaryColumn,
+        predictorColumns: selectedPredictors,
+        benchmarkValue,
+        successValue,
+        numClusters,
+        decisionThreshold: newCutoff,
+        alpha,
+        alternative: 'two-sided',
+      };
+      const testRes = executeHypothesisTest(config, queryRes.columns, queryRes.values);
+      setResult(testRes);
+    } catch (err) {
+      console.error('Threshold re-run error:', err);
     }
   };
 
@@ -838,6 +867,77 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
               </div>
             )}
 
+            {/* Decision Cutoff Threshold (τ) for Logistic Regression */}
+            {testType === 'logistic_regression' && (
+              <div className="space-y-1.5 p-2.5 rounded bg-surface border border-border/80">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-200">
+                    Decision Cutoff Threshold (τ)
+                  </label>
+                  <span className="font-mono text-cyan-400 font-bold text-xs bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                    τ = {decisionThreshold.toFixed(2)} ({(decisionThreshold * 100).toFixed(0)}%)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={0.95}
+                  step={0.05}
+                  value={decisionThreshold}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (result && result.testType === 'logistic_regression') {
+                      handleApplyThreshold(val);
+                    } else {
+                      setDecisionThreshold(val);
+                    }
+                  }}
+                  className="w-full h-1.5 bg-background rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex items-center justify-between text-[9px] text-muted font-mono">
+                  <span>0.05 (High Recall)</span>
+                  <span>0.50 (Standard)</span>
+                  <span>0.95 (High Precision)</span>
+                </div>
+                <div className="flex items-center gap-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (result && result.testType === 'logistic_regression') {
+                        handleApplyThreshold(0.50);
+                      } else {
+                        setDecisionThreshold(0.50);
+                      }
+                    }}
+                    className={`flex-1 py-1 rounded text-[10px] font-medium border transition-all ${
+                      decisionThreshold === 0.50
+                        ? 'bg-primary/20 border-primary text-cyan-300 font-bold'
+                        : 'bg-background border-border text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Standard 0.50
+                  </button>
+                  {result?.confusionMatrix?.optimalThreshold !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() => handleApplyThreshold(result.confusionMatrix!.optimalThreshold!)}
+                      className={`flex-1 py-1 rounded text-[10px] font-medium border transition-all ${
+                        decisionThreshold === result.confusionMatrix.optimalThreshold
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                          : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                      }`}
+                      title="Apply optimal Youden threshold that balances sensitivity and specificity"
+                    >
+                      Optimal Youden (τ = {result.confusionMatrix.optimalThreshold})
+                    </button>
+                  )}
+                </div>
+                <p className="text-[9.5px] text-muted leading-tight pt-1">
+                  Lower thresholds boost event sensitivity (recall) for imbalanced outcomes (e.g. failure rate &lt; 10%).
+                </p>
+              </div>
+            )}
+
             {/* Clusters k Selector for K-Means */}
             {testType === 'kmeans_clustering' && (
               <div>
@@ -957,9 +1057,15 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                 <div className="space-y-1">
                   <div className="font-semibold text-amber-900 dark:text-amber-300 flex items-center gap-2">
                     <span>Statistical Diagnostics Advisory</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-950 dark:text-amber-200 font-semibold">
-                      Skew: {result.diagnostics.skewness} • Kurt: {result.diagnostics.kurtosis} • JB p: {result.diagnostics.jarqueBeraPVal}
-                    </span>
+                    {result.testType === 'logistic_regression' ? (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-950 dark:text-amber-200 font-semibold">
+                        {result.diagnostics.classBalance} • EPV: {result.diagnostics.eventsPerVariable}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-950 dark:text-amber-200 font-semibold">
+                        Skew: {result.diagnostics.skewness} • Kurt: {result.diagnostics.kurtosis} • JB p: {result.diagnostics.jarqueBeraPVal}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed font-normal">
                     {result.diagnostics.recommendation}
@@ -1312,8 +1418,20 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
                           <td className="px-3 py-2 text-slate-300">{coef.pValue < 0.0001 ? '< 0.0001' : coef.pValue}</td>
                           {result.testType === 'logistic_regression' && (
                             <>
-                              <td className="px-3 py-2 text-emerald-400 font-bold">{coef.oddsRatio}</td>
-                              <td className="px-3 py-2 text-slate-400">[{coef.ciLower}, {coef.ciUpper}]</td>
+                              <td className="px-3 py-2 text-emerald-400 font-bold">
+                                {coef.oddsRatio !== undefined
+                                  ? coef.oddsRatio < 0.001
+                                    ? '< 0.001'
+                                    : coef.oddsRatio > 100000
+                                    ? coef.oddsRatio.toExponential(2)
+                                    : coef.oddsRatio.toLocaleString('en-US', { maximumFractionDigits: 3 })
+                                  : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-slate-400">
+                                {coef.ciLower !== undefined && coef.ciUpper !== undefined
+                                  ? `[${coef.ciLower < 0.001 ? '< 0.001' : coef.ciLower > 100000 ? coef.ciLower.toExponential(2) : coef.ciLower.toLocaleString('en-US', { maximumFractionDigits: 3 })}, ${coef.ciUpper < 0.001 ? '< 0.001' : coef.ciUpper > 100000 ? coef.ciUpper.toExponential(2) : coef.ciUpper.toLocaleString('en-US', { maximumFractionDigits: 3 })}]`
+                                  : '-'}
+                              </td>
                             </>
                           )}
                           {coef.vif !== undefined && (
@@ -1410,10 +1528,29 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
             {/* Binary Logistic Classification Confusion Matrix */}
             {result.confusionMatrix && (
               <div className="p-4 rounded-xl bg-surface border border-border">
-                <h4 className="text-xs font-semibold uppercase text-slate-300 mb-3 flex items-center gap-1.5">
-                  <TableIcon className="w-3.5 h-3.5 text-primary" />
-                  <span>Classification Confusion Matrix (Cutoff = 0.5)</span>
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <h4 className="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                    <TableIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>Classification Confusion Matrix (Cutoff τ = {result.confusionMatrix.threshold ?? 0.50})</span>
+                  </h4>
+                  {result.confusionMatrix.optimalThreshold !== undefined && (
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <span className="text-muted">Optimal Youden Cutoff:</span>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyThreshold(result.confusionMatrix!.optimalThreshold!)}
+                        className={`font-mono px-2 py-0.5 rounded border text-[10.5px] font-semibold transition-all ${
+                          decisionThreshold === result.confusionMatrix.optimalThreshold
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 font-bold'
+                            : 'bg-surface-raised text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10 cursor-pointer'
+                        }`}
+                        title="Click to apply optimal Youden cutoff (Maximized Sensitivity + Specificity - 1)"
+                      >
+                        τ = {result.confusionMatrix.optimalThreshold} (J = {result.confusionMatrix.optimalYoudenJ})
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-center border border-border font-mono">

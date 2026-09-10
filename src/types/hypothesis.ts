@@ -34,6 +34,7 @@ export interface TestConfig {
   benchmarkValue?: number; // for One-Sample t-test, Binomial p0 (e.g. 0.5)
   successValue?: string | number;
   numClusters?: number; // for kmeans (e.g. 2, 3, 4, 5)
+  decisionThreshold?: number; // Classification probability cutoff for logistic regression (e.g. 0.50)
   alpha: number; // 0.01, 0.05, 0.10
   alternative: 'two-sided' | 'greater' | 'less';
 }
@@ -99,6 +100,9 @@ export interface ConfusionMatrix {
   precision: number;
   recall: number;
   f1Score: number;
+  threshold?: number;
+  optimalThreshold?: number;
+  optimalYoudenJ?: number;
 }
 
 export interface AssumptionDiagnostics {
@@ -109,6 +113,11 @@ export interface AssumptionDiagnostics {
   isNormal: boolean;
   varianceRatio?: number;
   recommendation?: string;
+  // Binary Logistic Regression Diagnostics
+  classBalance?: string;
+  eventsPerVariable?: number;
+  epvStatus?: 'sufficient' | 'marginal' | 'insufficient';
+  baseRate?: number;
 }
 
 export interface ProportionComparisonData {
