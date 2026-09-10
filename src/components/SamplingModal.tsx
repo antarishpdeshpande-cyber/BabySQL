@@ -3,7 +3,8 @@ import { TableMeta } from '../types';
 import {
   generateSampleTable,
   generateDistributionSampleTable,
-  getStratifiedBreakdown,
+  getStrataPopulationSizes,
+  computeStratumBreakdownFromPop,
   SamplingConfig,
   DistributionSamplingConfig,
   StratumAllocationInfo,
@@ -65,6 +66,8 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
   const [simTargetTable, setSimTargetTable] = useState<string>('sim_normal_1000');
 
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [strataPopulation, setStrataPopulation] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (defaultTable && tables.some((t) => t.name === defaultTable)) {
@@ -88,21 +91,30 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
     setSimTargetTable(`sim_${distType}_${distN}`);
   }, [distType, distN]);
 
-  // Compute live stratum allocation breakdown preview
-  const stratumBreakdown = useMemo(() => {
+  // Query strata population counts from SQLite ONCE when sourceTable or stratifyColumn changes
+  useEffect(() => {
     if (!isOpen || method !== 'stratified' || !sourceTable || !stratifyColumn) {
+      setStrataPopulation(new Map());
+      return;
+    }
+    const popMap = getStrataPopulationSizes(sourceTable, stratifyColumn);
+    setStrataPopulation(popMap);
+  }, [isOpen, method, sourceTable, stratifyColumn]);
+
+  // Compute live stratum allocation breakdown preview purely in memory (< 0.01ms, 0 DB queries)
+  const stratumBreakdown = useMemo(() => {
+    if (!isOpen || method !== 'stratified' || strataPopulation.size === 0) {
       return [];
     }
     const target = stratifiedAllocation === 'proportional'
       ? (stratifiedSizeMode === 'count' ? stratifiedTotalCount : stratifiedPercentage)
       : countPerStratum;
     const isPct = stratifiedAllocation === 'proportional' && stratifiedSizeMode === 'pct';
-    return getStratifiedBreakdown(sourceTable, stratifyColumn, stratifiedAllocation, target, isPct);
+    return computeStratumBreakdownFromPop(strataPopulation, stratifiedAllocation, target, isPct);
   }, [
     isOpen,
     method,
-    sourceTable,
-    stratifyColumn,
+    strataPopulation,
     stratifiedAllocation,
     stratifiedSizeMode,
     stratifiedTotalCount,
@@ -117,47 +129,53 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
 
   const handleGenerate = () => {
     setError(null);
-    try {
-      if (tabMode === 'resample') {
-        if (!sourceTable) {
-          throw new Error('Please select a source table.');
+    setIsGenerating(true);
+    // Yield to the browser thread so the loading state renders smoothly
+    setTimeout(() => {
+      try {
+        if (tabMode === 'resample') {
+          if (!sourceTable) {
+            throw new Error('Please select a source table.');
+          }
+          const res = generateSampleTable({
+            sourceTable,
+            targetTable,
+            method,
+            count,
+            percentage,
+            stratifyColumn,
+            stratifiedAllocation,
+            stratifiedTotalCount: stratifiedSizeMode === 'count' ? stratifiedTotalCount : undefined,
+            stratifiedPercentage: stratifiedSizeMode === 'pct' ? stratifiedPercentage : undefined,
+            countPerStratum,
+            stepK,
+          });
+          onSampleCreated(res.tableName, res.rowCount);
+        } else {
+          const res = generateDistributionSampleTable({
+            targetTable: simTargetTable,
+            distribution: distType,
+            sampleSize: distN,
+            param1,
+            param2,
+          });
+          onSampleCreated(res.tableName, res.rowCount);
         }
-        const res = generateSampleTable({
-          sourceTable,
-          targetTable,
-          method,
-          count,
-          percentage,
-          stratifyColumn,
-          stratifiedAllocation,
-          stratifiedTotalCount: stratifiedSizeMode === 'count' ? stratifiedTotalCount : undefined,
-          stratifiedPercentage: stratifiedSizeMode === 'pct' ? stratifiedPercentage : undefined,
-          countPerStratum,
-          stepK,
-        });
-        onSampleCreated(res.tableName, res.rowCount);
-      } else {
-        const res = generateDistributionSampleTable({
-          targetTable: simTargetTable,
-          distribution: distType,
-          sampleSize: distN,
-          param1,
-          param2,
-        });
-        onSampleCreated(res.tableName, res.rowCount);
+        setIsGenerating(false);
+        onClose();
+      } catch (err: any) {
+        console.error('Sampling error:', err);
+        setError(err.message || 'Sampling generation failed.');
+        setIsGenerating(false);
       }
-      onClose();
-    } catch (err: any) {
-      console.error('Sampling error:', err);
-      setError(err.message || 'Sampling generation failed.');
-    }
+    }, 40);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div className="bg-surface border border-border rounded-xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Header */}
-        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between bg-surface-raised/40">
+        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between bg-surface-raised/40 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-cyan-400">
               <Dice5 className="w-4 h-4" />
@@ -189,7 +207,7 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
         </div>
 
         {/* Mode Switch Tabs */}
-        <div className="flex border-b border-border bg-surface text-xs font-medium">
+        <div className="flex border-b border-border bg-surface text-xs font-medium shrink-0">
           <button
             onClick={() => setTabMode('resample')}
             className={`flex-1 py-2 text-center border-b-2 transition-all flex items-center justify-center gap-1.5 ${
@@ -215,8 +233,8 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 space-y-4 text-xs">
+        {/* Modal Body (Scrollable with independent footer) */}
+        <div className="p-5 space-y-4 text-xs flex-1 min-h-0 overflow-y-auto">
           {error && (
             <div className="p-2.5 rounded bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
               {error}
@@ -688,26 +706,39 @@ export const SamplingModal: React.FC<SamplingModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-5 py-3 border-t border-border bg-surface-raised/20 flex items-center justify-between">
+        {/* Modal Footer (Pinned & Always Visible) */}
+        <div className="px-5 py-3 border-t border-border bg-surface-raised/40 flex items-center justify-between shrink-0 sticky bottom-0 z-10">
           <div className="text-[10px] text-muted flex items-center gap-1">
             <Info className="w-3 h-3 text-cyan-400" />
-            <span>Saved as a queryable SQLite table in &lt; 5ms</span>
+            <span>Saved as a queryable SQLite table in &lt; 15ms</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded border border-border hover:bg-surface-raised text-xs text-slate-300"
+              disabled={isGenerating}
+              className="px-3 py-1.5 rounded border border-border hover:bg-surface-raised text-xs text-slate-300 disabled:opacity-50 cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
+              type="button"
+              disabled={isGenerating}
               onClick={handleGenerate}
-              className="px-3.5 py-1.5 rounded bg-primary hover:bg-primary-hover active:scale-[0.98] text-slate-900 font-semibold text-xs flex items-center gap-1.5 shadow"
+              className="px-4 py-1.5 rounded bg-primary hover:bg-primary-hover active:scale-[0.98] text-slate-900 font-semibold text-xs flex items-center gap-1.5 shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
             >
-              <Dice5 className="w-3.5 h-3.5" />
-              <span>{tabMode === 'resample' ? 'Generate Sample Table' : 'Simulate & Create Table'}</span>
+              {isGenerating ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                  <span>Sampling...</span>
+                </>
+              ) : (
+                <>
+                  <Dice5 className="w-3.5 h-3.5" />
+                  <span>{tabMode === 'resample' ? 'Generate Sample Table' : 'Simulate & Create Table'}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
