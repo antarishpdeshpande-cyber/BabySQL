@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
-title BabySQL Enterprise BRM Platform
+title BabySQL Enterprise Hypothesis Testing Platform
 cd /d "%~dp0"
 
 echo ===================================================
-echo   Starting BabySQL Enterprise BRM Platform
+echo   Starting BabySQL Enterprise Hypothesis Testing Platform
 echo ===================================================
 
 REM 1. Self-healing check: Ensure dist\index.html exists

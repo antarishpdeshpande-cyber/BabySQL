@@ -348,6 +348,7 @@ export const App: React.FC = () => {
                 columns={queryResult?.columns || []}
                 values={queryResult?.values || []}
                 initialColumn={selectedStatsColumn}
+                tableName={activeTableName}
               />
             ) : (
               <HypothesisStudio

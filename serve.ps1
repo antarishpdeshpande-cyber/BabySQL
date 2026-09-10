@@ -37,7 +37,7 @@ if (-not $listener -or -not $listener.IsListening) {
 $url = "http://localhost:$Port/"
 Write-Host ""
 Write-Host "=======================================================" -ForegroundColor Cyan
-Write-Host "  BabySQL Enterprise BRM Studio (PowerShell Engine)" -ForegroundColor Cyan
+Write-Host "  BabySQL Enterprise Hypothesis Testing Platform (PowerShell Engine)" -ForegroundColor Cyan
 Write-Host "  Running locally at: $url" -ForegroundColor Green
 Write-Host "  Serving from: $rootDir" -ForegroundColor DarkGray
 Write-Host "  100% Local • Zero Cloud • Instant Stats" -ForegroundColor DarkGray

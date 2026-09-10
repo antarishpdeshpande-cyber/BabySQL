@@ -29,6 +29,8 @@ export interface HistogramBin {
   max: number;
   count: number;
   percentage: number;
+  cumulativeCount?: number;
+  cumulativePercentage?: number;
 }
 
 export interface DescriptiveStats {
@@ -47,6 +49,9 @@ export interface DescriptiveStats {
   median?: number;
   variance?: number;
   stdDev?: number;
+  stdError?: number;
+  skewness?: number;
+  kurtosis?: number;
   q1?: number;
   q3?: number;
   iqr?: number;

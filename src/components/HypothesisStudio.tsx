@@ -383,11 +383,11 @@ ${result.executiveSummary.effectSizeLabel || ''}`;
             <div className="flex items-center gap-2">
               <FlaskConical className="w-4 h-4 text-cyan-400" />
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                Enterprise BRM Studio
+                Enterprise Hypothesis Studio
               </h2>
             </div>
             <p className="text-[11px] text-muted mt-0.5">
-              Business Research Methods &amp; Mathematical Inference
+              Enterprise Hypothesis Testing &amp; Mathematical Inference
             </p>
           </div>
           <button

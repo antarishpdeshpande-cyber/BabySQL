@@ -59,7 +59,7 @@ def main():
         try:
             with ReusableTCPServer(server_address, Handler) as httpd:
                 print(f"\n=======================================================", flush=True)
-                print(f"  BabySQL Enterprise BRM Studio", flush=True)
+                print(f"  BabySQL Enterprise Hypothesis Testing Platform", flush=True)
                 print(f"  Running locally at: {url}", flush=True)
                 print(f"  Serving from: {DIRECTORY}", flush=True)
                 print(f"  100% Local • Zero Cloud • Instant Stats", flush=True)

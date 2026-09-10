@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2">
             <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">BabySQL</span>
             <span className="text-[10px] uppercase font-mono font-semibold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
-              Enterprise BRM Platform
+              Enterprise Hypothesis Testing Platform
             </span>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-raised text-muted border border-border">
               v1.0 • Local

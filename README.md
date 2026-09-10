@@ -1,4 +1,4 @@
-# 🍼 BabySQL Enterprise BRM Platform
+# 🍼 BabySQL Enterprise Hypothesis Testing Platform
 
 <div align="center">
 
@@ -6,17 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](https://opensource.org/licenses/MIT)
 [![Engine](https://img.shields.io/badge/Engine-SQLite%203%20WASM-cyan.svg)](https://sql.js.org/)
 [![Stats Engine](https://img.shields.io/badge/Stats-Pure%20TS%20%7C%20jStat%20%7C%20simple--statistics-blueviolet.svg)]()
-[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-473%20kB%20(143%20kB%20gzipped)-brightgreen.svg)]()
+[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-488%20kB%20(147%20kB%20gzipped)-brightgreen.svg)]()
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local%20%26%20Offline-orange.svg)]()
 [![Design](https://img.shields.io/badge/Theme-Dark%20%7C%20Minimalist%20Light-teal.svg)]()
 
 <br />
 
-**An ultra-lightweight, zero-cloud, privacy-first SQLite database studio, CSV ingestion engine, and Enterprise Business Research Methods (BRM) decision platform.**
+**An ultra-lightweight, zero-cloud, privacy-first SQLite database studio, CSV ingestion engine, and Enterprise Hypothesis Testing Platform.**
 
 *Runs 100% locally inside your browser via WebAssembly SQLite 3. No database servers, no heavy Electron runtimes, zero cloud telemetry, instant sub-5ms statistical calculations, and standalone execution via `run.bat`.*
 
-[Quickstart](#-quickstart-totally-standalone) • [Which Test to Use](#-data-types--business-use-cases) • [Statistical Models](#-15-enterprise-brm-statistical-models) • [Assumption Diagnostics](#-automated-assumption-diagnostics) • [Low-Graphic Visualizations](#-low-graphic-distribution-graphs) • [Sampling & Simulation](#-dataset-sampling--simulation) • [Benchmarks](#-load-capacity--benchmarks)
+[Quickstart](#-quickstart-totally-standalone) • [Which Test to Use](#-data-types--business-use-cases) • [Statistical Models](#-15-enterprise-hypothesis-testing-models) • [Assumption Diagnostics](#-automated-assumption-diagnostics) • [Low-Graphic Visualizations](#-low-graphic-distribution-graphs) • [Sampling & Simulation](#-dataset-sampling--simulation) • [Benchmarks](#-load-capacity--benchmarks)
 
 </div>
 
@@ -71,7 +71,7 @@ node bin/babysql.js
 
 ---
 
-## 🧪 15 Enterprise BRM Statistical Models
+## 🧪 15 Enterprise Hypothesis Testing Models
 
 All models execute in client-side WebAssembly / TypeScript in **under 5 milliseconds** and generate executive plain-English summaries with actionable business takeaways:
 
@@ -125,25 +125,36 @@ Before trusting parametric models, BabySQL automatically evaluates underlying as
 
 To maintain a featherweight footprint with zero external graphing dependencies, BabySQL features custom, mathematically exact **pure SVG distribution graphics**:
 
-1. **Box & Whisker Plot**:
+1. **Box & Whisker Plot with Calibrated X-Axis**:
    * Minimum, Lower Quartile ($Q_1$), Median ($Q_2$), Upper Quartile ($Q_3$), Maximum.
    * Tukey 1.5× IQR inner fences with whisker caps.
-   * Outlier dots plotted individually beyond the fences.
-2. **Kernel Density Estimation (KDE) Continuous Curve**:
+   * Calibrated X-axis scale line with quantitative tick marks and numerical coordinates.
+   * Outlier points with hover tooltips displaying exact values and distance from mean ($Z$-score $\sigma$).
+2. **Kernel Density Estimation (KDE) Continuous Distribution**:
    * Continuous Gaussian kernel $K(u) = \frac{1}{\sqrt{2\pi}} e^{-u^2/2}$.
-   * Optimal bandwidth selection via **Silverman's Rule of Thumb**: $h = 0.9 \min(\sigma, \frac{\text{IQR}}{1.34}) n^{-1/5}$.
-   * Smooth SVG density fill with mean reference line.
-3. **Frequency Histogram**:
-   * Equidistant bin distribution with bin counts and interactive hover tooltips.
+   * Optimal bandwidth selection via **Silverman's Rule of Thumb**: $h = 1.06 \sigma n^{-1/5}$.
+   * Calibrated X-axis scale with 5 evenly spaced numerical ticks.
+   * Superimposed guidelines for Mean ($\mu$) in emerald and Median ($Med$) in cyan.
+   * Empirical $\pm 1\sigma$ standard deviation zone highlight.
+   * Interactive hover probe for point-wise continuous value tracking.
+3. **Frequency Distribution Histogram**:
+   * 8 equidistant bins with mathematically crisp interval notation ($[min, max)$ and $[min, max]$).
+   * Count and percentage tags displayed above each bar for immediate visibility.
+   * Interval labels and cumulative percentages beneath each bin on the X-axis.
+   * Mean and Median reference indicators.
 
 ---
 
 ## 📑 Executive Report Export & Variable Search
 
-* **Full Executive Report Export & Copy**:
+* **Hypothesis Testing Report Export & Copy**:
   * **`Copy Full Report`**: Copies a formatted executive Markdown report directly to your clipboard.
-  * **`Download Report (.md)`**: Exports a complete standalone Markdown document containing the executive verdict, hypotheses ($H_0 / H_a$), assumption diagnostics, full parameter metrics, model tables (ANOVA, VIF, Odds Ratios, Confusion Matrix, Cluster Centroids, A/B Lift), and distribution summaries.
-  * **`Download JSON`**: Exports the raw statistical object with all computed metrics and matrices for programmatic integration.
+  * **`Download Report (.md)`**: Exports a standalone Markdown report containing the executive verdict, hypotheses ($H_0 / H_a$), assumption diagnostics, parameter metrics, model tables (ANOVA, VIF, Odds Ratios, Confusion Matrix, Cluster Centroids, A/B Lift), and distribution summaries.
+  * **`Download JSON`**: Exports raw statistical data structures for programmatic pipeline integration.
+* **Descriptive Statistics Profiling Export & Copy**:
+  * **`Copy Report`**: Formats and copies a complete profiling summary of the selected column to your clipboard.
+  * **`Download (.md)`**: Exports an executive Markdown report containing Five-Number quartile summaries, moments (Mean, Sample Std Dev, Sample Variance with Bessel's correction, Std Error, Skewness, Kurtosis), and full histogram bin distribution tables.
+  * **`JSON`**: Exports raw descriptive metrics and bin arrays.
 * **Variable Searchbar with Quick Actions**:
   * Real-time column filtering in Hypothesis Studio to effortlessly locate predictors across wide datasets (e.g. 50+ columns).
   * Quick-action **`All`** and **`Clear`** buttons for multi-predictor regression and cluster analysis.

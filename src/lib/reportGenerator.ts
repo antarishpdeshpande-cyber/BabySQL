@@ -1,4 +1,5 @@
 import { HypothesisTestResult } from '../types/hypothesis';
+import { DescriptiveStats } from '../types';
 
 /**
  * Generates an executive-ready Markdown report from hypothesis testing results.
@@ -11,7 +12,7 @@ export function generateFullHypothesisMarkdown(
   const dateStr = new Date().toLocaleString();
   const lines: string[] = [];
 
-  lines.push(`# 🍼 BabySQL Enterprise BRM Report`);
+  lines.push(`# 🍼 BabySQL Enterprise Hypothesis Testing Report`);
   lines.push(`## ${result.testName}`);
   lines.push(``);
   lines.push(`- **Date Generated:** ${dateStr}`);
@@ -203,7 +204,115 @@ export function generateFullHypothesisMarkdown(
   }
 
   lines.push(`---`);
-  lines.push(`*Report generated locally with BabySQL Enterprise BRM Platform. Zero cloud telemetry • 100% Offline.*`);
+  lines.push(`*Report generated locally with BabySQL Enterprise Hypothesis Testing Platform. Zero cloud telemetry • 100% Offline.*`);
+
+  return lines.join('\n');
+}
+
+/**
+ * Generates an executive-ready Markdown report from descriptive statistics profiling.
+ */
+export function generateDescriptiveStatsMarkdown(
+  stats: DescriptiveStats,
+  tableName?: string
+): string {
+  const dateStr = new Date().toLocaleString();
+  const lines: string[] = [];
+
+  lines.push(`# 🍼 BabySQL Enterprise Hypothesis Testing Platform`);
+  lines.push(`## Descriptive Statistical Profile: \`${stats.columnName}\``);
+  lines.push(``);
+  lines.push(`- **Date Generated:** ${dateStr}`);
+  if (tableName) {
+    lines.push(`- **Data Source Table:** \`${tableName}\``);
+  }
+  lines.push(`- **Target Column:** \`${stats.columnName}\``);
+  lines.push(`- **Data Type:** ${stats.isNumeric ? 'Continuous / Numeric' : 'Categorical / Discrete'}`);
+  lines.push(`- **Total Rows ($N$):** ${stats.totalCount.toLocaleString()}`);
+  lines.push(`- **Valid Observations ($n$):** ${stats.validCount.toLocaleString()}`);
+  lines.push(`- **Missing / Nulls:** ${stats.nullCount.toLocaleString()} (${stats.nullPercentage}%)`);
+  lines.push(`- **Distinct Entities:** ${stats.uniqueCount.toLocaleString()}`);
+  lines.push(``);
+  lines.push(`---`);
+  lines.push(``);
+
+  if (stats.isNumeric) {
+    lines.push(`### 📐 Central Tendency & Dispersion Metrics`);
+    lines.push(``);
+    lines.push(`| Metric | Value | Mathematical Definition |`);
+    lines.push(`| :--- | :--- | :--- |`);
+    lines.push(`| **Arithmetic Mean ($\\mu$)** | \`${stats.mean?.toLocaleString()}\` | First raw sample moment $\\bar{x} = \\frac{1}{n}\\sum x_i$ |`);
+    lines.push(`| **Median ($Q_2$)** | \`${stats.median?.toLocaleString()}\` | 50th percentile (robust central point) |`);
+    lines.push(`| **Standard Deviation ($s$)** | \`${stats.stdDev?.toLocaleString()}\` | Sample root mean square error (Bessel's corrected $n-1$) |`);
+    lines.push(`| **Sample Variance ($s^2$)** | \`${stats.variance?.toLocaleString()}\` | Unbiased sample dispersion $\\frac{1}{n-1}\\sum (x_i - \\bar{x})^2$ |`);
+    if (stats.stdError !== undefined) {
+      lines.push(`| **Standard Error ($SE_{\\bar{x}}$)** | \`${stats.stdError.toLocaleString()}\` | Standard error of sample mean $\\frac{s}{\\sqrt{n}}$ |`);
+    }
+    if (stats.sum !== undefined) {
+      lines.push(`| **Sum ($\\Sigma$)** | \`${stats.sum.toLocaleString()}\` | Total aggregate sum |`);
+    }
+    lines.push(`| **Interquartile Range ($IQR$)** | \`${stats.iqr?.toLocaleString()}\` | Mid-spread $Q_3 - Q_1$ |`);
+    lines.push(``);
+
+    lines.push(`### 📊 Five-Number Quartile Summary`);
+    lines.push(``);
+    lines.push(`| Quartile / Order Statistic | Value | Percentile |`);
+    lines.push(`| :--- | :--- | :--- |`);
+    lines.push(`| **Minimum ($Min$)** | \`${stats.min?.toLocaleString()}\` | 0th percentile |`);
+    lines.push(`| **Lower Quartile ($Q_1$)** | \`${stats.q1?.toLocaleString()}\` | 25th percentile |`);
+    lines.push(`| **Median ($Q_2$)** | \`${stats.median?.toLocaleString()}\` | 50th percentile |`);
+    lines.push(`| **Upper Quartile ($Q_3$)** | \`${stats.q3?.toLocaleString()}\` | 75th percentile |`);
+    lines.push(`| **Maximum ($Max$)** | \`${stats.max?.toLocaleString()}\` | 100th percentile |`);
+    if (stats.max !== undefined && stats.min !== undefined) {
+      lines.push(`| **Total Range** | \`${(stats.max - stats.min).toLocaleString()}\` | $Max - Min$ |`);
+    }
+    lines.push(``);
+
+    if (stats.skewness !== undefined || stats.kurtosis !== undefined) {
+      lines.push(`### 🛡️ Distribution Shape & Moment Diagnostics`);
+      lines.push(``);
+      lines.push(`- **Skewness (Fisher $g_1$):** \`${stats.skewness}\` ${
+        (stats.skewness || 0) > 1
+          ? '(Substantial positive/right skew)'
+          : (stats.skewness || 0) < -1
+          ? '(Substantial negative/left skew)'
+          : '(Symmetric / approximately normal)'
+      }`);
+      lines.push(`- **Excess Kurtosis ($g_2$):** \`${stats.kurtosis}\` ${
+        (stats.kurtosis || 0) > 1
+          ? '(Leptokurtic: heavy tails & sharper peak)'
+          : (stats.kurtosis || 0) < -1
+          ? '(Platykurtic: light tails & flatter distribution)'
+          : '(Mesokurtic: normal-like tail weight)'
+      }`);
+      lines.push(``);
+    }
+
+    if (stats.histogram && stats.histogram.length > 0) {
+      lines.push(`### 📈 Frequency Distribution Histogram Bins`);
+      lines.push(``);
+      lines.push(`| Bin Range $[Min, Max)$ | Absolute Count | Share (%) | Cumulative Share (%) |`);
+      lines.push(`| :--- | :--- | :--- | :--- |`);
+      stats.histogram.forEach((bin) => {
+        lines.push(
+          `| \`${bin.binLabel}\` | ${bin.count.toLocaleString()} | ${bin.percentage}% | ${bin.cumulativePercentage ?? 'N/A'}% |`
+        );
+      });
+      lines.push(``);
+    }
+  } else if (stats.topValues && stats.topValues.length > 0) {
+    lines.push(`### 🏷️ Top Categorical Value Frequencies`);
+    lines.push(``);
+    lines.push(`| Rank | Category Value | Frequency Count | Share (%) |`);
+    lines.push(`| :--- | :--- | :--- | :--- |`);
+    stats.topValues.forEach((item, idx) => {
+      lines.push(`| ${idx + 1} | **${item.value || '(blank)'}** | ${item.count.toLocaleString()} | ${item.percentage}% |`);
+    });
+    lines.push(``);
+  }
+
+  lines.push(`---`);
+  lines.push(`*Profile generated locally with BabySQL Enterprise Hypothesis Testing Platform. Zero cloud telemetry • 100% Offline.*`);
 
   return lines.join('\n');
 }

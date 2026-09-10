@@ -55,22 +55,51 @@ export function calculateDescriptiveStats(columnName: string, rawValues: any[]):
     const q3 = Math.round(getPercentile(numbers, 0.75) * 1000) / 1000;
     const iqr = Math.round((q3 - q1) * 1000) / 1000;
 
-    // Variance and StdDev (Sample Variance)
+    // Variance, StdDev (Sample Variance) and StdError
     const varianceSum = numbers.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0);
     const variance = n > 1 ? Math.round((varianceSum / (n - 1)) * 1000) / 1000 : 0;
     const stdDev = Math.round(Math.sqrt(variance) * 1000) / 1000;
+    const stdError = n > 0 ? Math.round((stdDev / Math.sqrt(n)) * 1000) / 1000 : 0;
 
-    // Build 8-bin histogram
+    // Moments: Skewness and Kurtosis
+    let m2 = 0;
+    let m3 = 0;
+    let m4 = 0;
+    for (const v of numbers) {
+      const d = v - mean;
+      m2 += d * d;
+      m3 += d * d * d;
+      m4 += d * d * d * d;
+    }
+    m2 /= n;
+    m3 /= n;
+    m4 /= n;
+    const popS = Math.sqrt(m2);
+    const skewness = popS > 0 ? Math.round((m3 / Math.pow(popS, 3)) * 1000) / 1000 : 0;
+    const kurtosis = popS > 0 ? Math.round((m4 / Math.pow(popS, 4) - 3) * 1000) / 1000 : 0;
+
+    // Build 8-bin histogram with mathematically exact intervals
     const histogram: HistogramBin[] = [];
     const numBins = 8;
     const range = max - min;
     const binSize = range === 0 ? 1 : range / numBins;
 
+    const formatBinVal = (v: number) => {
+      if (Math.abs(v) >= 10000) return Math.round(v).toLocaleString();
+      if (Number.isInteger(v)) return v.toString();
+      return (Math.round(v * 10) / 10).toString();
+    };
+
     for (let i = 0; i < numBins; i++) {
       const binMin = min + i * binSize;
       const binMax = i === numBins - 1 ? max : min + (i + 1) * binSize;
+      const binLabel =
+        i === numBins - 1
+          ? `[${formatBinVal(binMin)}, ${formatBinVal(binMax)}]`
+          : `[${formatBinVal(binMin)}, ${formatBinVal(binMax)})`;
+
       histogram.push({
-        binLabel: `${Math.round(binMin * 10) / 10} - ${Math.round(binMax * 10) / 10}`,
+        binLabel,
         min: binMin,
         max: binMax,
         count: 0,
@@ -95,8 +124,12 @@ export function calculateDescriptiveStats(columnName: string, rawValues: any[]):
       }
     }
 
+    let cumCount = 0;
     for (const bin of histogram) {
       bin.percentage = Math.round((bin.count / n) * 1000) / 10;
+      cumCount += bin.count;
+      bin.cumulativeCount = cumCount;
+      bin.cumulativePercentage = Math.round((cumCount / n) * 1000) / 10;
     }
 
     return {
@@ -114,6 +147,9 @@ export function calculateDescriptiveStats(columnName: string, rawValues: any[]):
       median,
       variance,
       stdDev,
+      stdError,
+      skewness,
+      kurtosis,
       q1,
       q3,
       iqr,
